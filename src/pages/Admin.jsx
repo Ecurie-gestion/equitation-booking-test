@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import MesCours from '../components/annee/MesCours'
 import CreneauxManager from '../components/annee/CreneauxManager'
-import PresencesManager from '../components/annee/PresencesManager'
 import EvenementsManager from '../components/annee/EvenementsManager'
 import CavaliersManager from '../components/annee/CavaliersManager'
 import ChevauxManager from '../components/annee/ChevauxManager'
@@ -18,19 +18,22 @@ const COLORS = {
   bg: '#f0f7ff'
 }
 
-const TABS = [
-  { key: 'creneaux', label: '📆 Créneaux', Component: CreneauxManager },
-  { key: 'presences', label: '✅ Présences', Component: PresencesManager },
-  { key: 'evenements', label: '📌 Stages & événements', Component: EvenementsManager },
-  { key: 'cavaliers', label: '🧑 Cavaliers', Component: CavaliersManager },
-  { key: 'chevaux', label: '🐴 Chevaux', Component: ChevauxManager }
+const TABS_PRINCIPAUX = [
+  { key: 'mes-cours', label: '📅 Mes cours', Component: MesCours },
+  { key: 'cavaliers', label: '🧑 Élèves', Component: CavaliersManager },
+  { key: 'chevaux', label: '🐴 Chevaux', Component: ChevauxManager },
+  { key: 'evenements', label: '📌 Stages & événements', Component: EvenementsManager }
 ]
+
+const TAB_GESTION = { key: 'gestion', label: '⚙️ Gestion des créneaux', Component: CreneauxManager }
+
+const TABS = [...TABS_PRINCIPAUX, TAB_GESTION]
 
 export default function Admin() {
   const [auth, setAuth] = useState(false)
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState(null)
-  const [activeTab, setActiveTab] = useState('creneaux')
+  const [activeTab, setActiveTab] = useState('mes-cours')
 
   const Header = () => (
     <header style={{ background: COLORS.navy, padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -74,22 +77,37 @@ export default function Admin() {
 
         <h1 style={{ color: COLORS.navy, margin: '0 0 1rem 0', fontSize: 'clamp(1.1rem, 4vw, 1.6rem)', textAlign: 'center' }}>🧑‍🏫 Espace Moniteurs</h1>
 
-        <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {TABS.map(t => (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.8rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {TABS_PRINCIPAUX.map(t => (
             <button key={t.key} onClick={() => setActiveTab(t.key)}
               style={{
                 background: activeTab === t.key ? COLORS.navy : 'white',
                 color: activeTab === t.key ? 'white' : COLORS.navy,
                 border: `1px solid ${COLORS.navy}`,
-                padding: '0.55rem 0.9rem',
+                padding: '0.7rem 1.1rem',
                 borderRadius: '20px',
                 cursor: 'pointer',
-                fontSize: '0.85rem',
+                fontSize: '0.95rem',
                 fontWeight: 'bold'
               }}>
               {t.label}
             </button>
           ))}
+        </div>
+
+        <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
+          <button onClick={() => setActiveTab(TAB_GESTION.key)}
+            style={{
+              background: 'none',
+              color: activeTab === TAB_GESTION.key ? COLORS.navy : '#999',
+              border: 'none',
+              textDecoration: activeTab === TAB_GESTION.key ? 'none' : 'underline',
+              cursor: 'pointer',
+              fontSize: '0.82rem',
+              fontWeight: activeTab === TAB_GESTION.key ? 'bold' : 'normal'
+            }}>
+            {TAB_GESTION.label}
+          </button>
         </div>
 
         <ActiveComponent />

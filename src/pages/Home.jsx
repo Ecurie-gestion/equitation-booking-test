@@ -35,30 +35,32 @@ export default function Home() {
 
       <header style={{
         background: COLORS.navy,
-        padding: '0.8rem 1rem',
+        padding: '0.9rem 1.5rem',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
+        gap: '1rem',
         position: 'sticky',
         top: 0,
         zIndex: 100,
         boxShadow: '0 2px 20px rgba(0,0,0,0.3)'
       }}>
-        <nav style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+        <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '48px', mixBlendMode: 'screen', filter: 'invert(1)' }} />
+        <nav style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button onClick={() => { setShowSlots(false); setSelectedSlot(null); setConfirmed(false) }}
             style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.85rem', opacity: 0.8, whiteSpace: 'nowrap' }}>
             Accueil
           </button>
           <button onClick={() => setShowMyBookings(true)}
-            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.7rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.4rem 0.8rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
             Mes inscriptions
           </button>
           <button onClick={() => setShowDemain(true)}
-            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.7rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.4rem 0.8rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
             🐴 Demain
           </button>
           <button onClick={() => setShowSlots(true)}
-            style={{ background: COLORS.sky, border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.7rem', borderRadius: '20px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+            style={{ background: COLORS.sky, border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.4rem 0.9rem', borderRadius: '20px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
             Réserver
           </button>
         </nav>
@@ -67,24 +69,28 @@ export default function Home() {
       {!showSlots && !selectedSlot && !confirmed && (
         <div style={{
           background: `linear-gradient(135deg, ${COLORS.navy} 0%, #2d4270 50%, #1a3a5c 100%)`,
-          padding: '4rem 2rem',
+          padding: '5.5rem 2rem 6rem 2rem',
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden'
         }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.05, backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 0, transparent 50%)', backgroundSize: '20px 20px' }} />
-         <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '80px', mixBlendMode: 'screen', filter: 'invert(1)', marginBottom: '1rem' }} />
-          <p style={{ color: COLORS.sky, fontSize: '0.9rem', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-            Bienvenue à l'
-          </p>
-          <h1 style={{ color: 'white', fontSize: 'clamp(2rem, 5vw, 3.5rem)', margin: '0 0 1rem 0', letterSpacing: '2px', fontWeight: 'bold' }}>
-            Ecurie de Groynne
-          </h1>
-          <div style={{ width: '80px', height: '3px', background: COLORS.sky, margin: '0 auto 1.5rem auto', borderRadius: '2px' }} />
-          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', maxWidth: '600px', margin: '0 auto 2rem auto', lineHeight: '1.8' }}>
-            Réservez votre leçon d'équitation durant les congés scolaires. Les places sont limitées !
-          </p>
-        
+          <div style={{ position: 'relative', maxWidth: '700px', margin: '0 auto' }}>
+            <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: '1.2rem' }}>🐴</span>
+            <p style={{ color: COLORS.sky, fontSize: '0.9rem', letterSpacing: '3px', textTransform: 'uppercase', marginBottom: '0.8rem' }}>
+              Bienvenue à l'
+            </p>
+            <h1 style={{ color: 'white', fontSize: 'clamp(2rem, 5vw, 3.5rem)', margin: '0 0 1.3rem 0', letterSpacing: '2px', fontWeight: 'bold' }}>
+              Ecurie de Groynne
+            </h1>
+            <div style={{ width: '80px', height: '3px', background: COLORS.sky, margin: '0 auto 1.8rem auto', borderRadius: '2px' }} />
+            <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 'clamp(1.05rem, 2.5vw, 1.3rem)', maxWidth: '600px', margin: '0 auto 0.6rem auto', lineHeight: '1.6' }}>
+              Des cours d'équitation toute l'année, pour tous niveaux
+            </p>
+            <p style={{ color: COLORS.sky, fontSize: 'clamp(0.9rem, 2vw, 1.05rem)', maxWidth: '600px', margin: '0 auto', letterSpacing: '0.5px' }}>
+              Cours - Stages - Pensions - Anniversaires - Concours - ...
+            </p>
+          </div>
         </div>
       )}
 
@@ -124,36 +130,26 @@ export default function Home() {
 
         ) : (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem', marginTop: '2rem' }}>
-              {[
-                { icon: '📅', title: 'Congés scolaires', desc: 'Cours disponibles pendant toutes les vacances' },
-                { icon: '🐴', title: 'Tous niveaux', desc: 'Du licol blanc au degré 3' },
-                { icon: '👥', title: 'Places limitées', desc: 'Inscrivez-vous vite !' }
-              ].map((item, i) => (
-                <div key={i} style={{
-                  background: 'white',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  textAlign: 'center',
-                  boxShadow: '0 4px 20px rgba(26,39,68,0.06)',
-                  borderTop: `4px solid ${COLORS.sky}`
-                }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{item.icon}</div>
-                  <h3 style={{ color: COLORS.navy, margin: '0 0 0.3rem 0', fontSize: '1rem' }}>{item.title}</h3>
-                  <p style={{ color: COLORS.textLight, margin: 0, fontSize: '0.85rem' }}>{item.desc}</p>
-                </div>
-              ))}
+            <div style={{ background: 'white', borderRadius: '16px', padding: '1.3rem 1.5rem', marginTop: '2rem', boxShadow: '0 4px 20px rgba(26,39,68,0.06)', borderLeft: `4px solid ${COLORS.sky}`, display: 'flex', alignItems: 'flex-start', gap: '0.8rem' }}>
+              <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>ℹ️</span>
+              <p style={{ color: COLORS.text, margin: 0, fontSize: '0.95rem', lineHeight: '1.7' }}>
+                Pour les cours fixes, c'est nous qui nous occupons d'inscrire votre enfant à sa leçon.<br/>
+                Pour les créneaux libres, les stages et les concours, réservez directement en ligne.
+              </p>
             </div>
 
+            <p style={{ color: COLORS.textLight, textAlign: 'center', fontSize: '1.05rem', margin: '2rem 0 1rem 0', fontStyle: 'italic' }}>
+              Suivre nos activités prévues en un simple coup d'œil ...
+            </p>
             <div style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', boxShadow: '0 4px 20px rgba(26,39,68,0.06)', marginBottom: '2rem' }}>
               <h2 style={{ color: COLORS.navy, marginTop: 0, fontSize: '1.3rem' }}>📅 Agenda de l'écurie</h2>
               <Calendar onSelectSlot={setSelectedSlot} />
             </div>
 
             <div style={{ background: `linear-gradient(135deg, ${COLORS.navy}, #2d4270)`, borderRadius: '20px', padding: '2.5rem', textAlign: 'center', boxShadow: '0 8px 40px rgba(26,39,68,0.2)' }}>
-              <h2 style={{ color: 'white', marginTop: 0, fontSize: '1.5rem' }}>Prêt à monter en selle ? 🐴</h2>
+              <h2 style={{ color: 'white', marginTop: 0, fontSize: '1.5rem' }}>Tu veux t'inscrire à un cours ? 🐴</h2>
               <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>
-                Choisissez votre créneau et inscrivez-vous en quelques clics !
+                N'hésite pas, réserve ta place !
               </p>
               <button onClick={() => setShowSlots(true)}
                 style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '1rem 3rem', fontSize: '1.1rem', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -179,13 +175,6 @@ export default function Home() {
               Rue de Groynne 28<br/>
               5300 Andenne<br/>
               📞 0478/60.56.89
-            </p>
-          </div>
-          <div>
-            <h3 style={{ color: COLORS.sky, marginTop: 0, fontSize: '1rem', letterSpacing: '1px' }}>RÉSERVATION</h3>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: '1.8' }}>
-              Inscription en ligne pour les cours durant les congés scolaires.<br/>
-              Pour les stages, contactez-nous par SMS.
             </p>
           </div>
         </div>

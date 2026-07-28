@@ -8,6 +8,25 @@ const EMPTY_FIXE = { jour_semaine: 1, heure_debut: '18:00', heure_fin: '19:00', 
 const EMPTY_LIBRE = { title: '', date: '', time_start: '', max_places: 6 }
 const EMPTY_ABO = { cavalier_id: '', type: 'unite', date_debut: new Date().toISOString().split('T')[0], date_fin: '', lecons_totales: 10 }
 const EMPTY_ELEVE = { parent_name: '', child_name: '', child_nom: '', email: '', phone: '' }
+const EMPTY_VACANCES = { nom: '', date_debut: '', date_fin: '' }
+
+function prochainesDates(jourSemaine, nbSemaines) {
+  const dates = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  let jour = new Date(today)
+  const diff = (jourSemaine - jour.getDay() + 7) % 7
+  jour.setDate(jour.getDate() + diff)
+  for (let i = 0; i < nbSemaines; i++) {
+    dates.push(new Date(jour).toISOString().split('T')[0])
+    jour.setDate(jour.getDate() + 7)
+  }
+  return dates
+}
+
+function estEnVacances(date, periodes) {
+  return periodes.some(p => date >= p.date_debut && date <= p.date_fin)
+}
 
 export default function CreneauxManager() {
   // Données
@@ -39,12 +58,67 @@ export default function CreneauxManager() {
 
   const [message, setMessage] = useState(null)
 
+  // Séances & vacances scolaires (gestion avancée)
+  const [generating, setGenerating] = useState(false)
+  const [periodesVacances, setPeriodesVacances] = useState([])
+  const [showVacancesForm, setShowVacancesForm] = useState(false)
+  const [newVacances, setNewVacances] = useState(EMPTY_VACANCES)
+
   useEffect(() => {
     fetchCreneauxFixes()
     fetchCreneauxLibres()
     fetchCavaliers()
     fetchChevaux()
+    fetchVacances()
   }, [])
+
+  async function fetchVacances() {
+    const { data } = await supabase.from('vacances_scolaires').select('*').order('date_debut')
+    setPeriodesVacances(data || [])
+  }
+
+  async function ajouterVacances() {
+    if (!newVacances.nom || !newVacances.date_debut || !newVacances.date_fin) {
+      setMessage({ type: 'error', text: 'Remplis tous les champs.' })
+      return
+    }
+    const { error } = await supabase.from('vacances_scolaires').insert(newVacances)
+    if (!error) {
+      await supabase.from('seances').delete().gte('date', newVacances.date_debut).lte('date', newVacances.date_fin)
+      setNewVacances(EMPTY_VACANCES)
+      setShowVacancesForm(false)
+      fetchVacances()
+      setMessage({ type: 'success', text: 'Période de vacances ajoutée.' })
+    } else {
+      setMessage({ type: 'error', text: "Erreur lors de l'ajout." })
+    }
+  }
+
+  async function supprimerVacances(id) {
+    if (!confirm('Supprimer cette période de vacances ?')) return
+    await supabase.from('vacances_scolaires').delete().eq('id', id)
+    fetchVacances()
+  }
+
+  async function genererSeances() {
+    setGenerating(true)
+    const rows = []
+    let sautees = 0
+    for (const cr of creneauxFixes) {
+      const dates = prochainesDates(cr.jour_semaine, 8)
+      for (const date of dates) {
+        if (estEnVacances(date, periodesVacances)) { sautees++; continue }
+        rows.push({ creneau_fixe_id: cr.id, date })
+      }
+    }
+    const { error } = await supabase.from('seances').upsert(rows, { onConflict: 'creneau_fixe_id,date', ignoreDuplicates: true })
+    setGenerating(false)
+    if (!error) {
+      setMessage({ type: 'success', text: `Séances générées${sautees > 0 ? ` (${sautees} date(s) sautée(s) car en vacances)` : ''}.` })
+    } else {
+      setMessage({ type: 'error', text: 'Erreur lors de la génération.' })
+    }
+  }
 
   async function fetchChevaux() {
     const { data } = await supabase.from('chevaux').select('*').eq('actif', true).order('nom')
@@ -506,6 +580,11 @@ export default function CreneauxManager() {
                           </select>
                           <input type="date" value={aboForm.date_debut} onChange={e => setAboForm({ ...aboForm, date_debut: e.target.value })}
                             style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                          {aboForm.type === 'unite' && (
+                            <p style={{ gridColumn: '1 / -1', margin: 0, color: '#666', fontSize: '0.78rem', fontStyle: 'italic' }}>
+                              La date choisie est celle du cours de remplacement (ex : un cavalier qui prend la place d'un absent, un cours d'essai). Le cavalier n'apparaîtra que pour cette séance-là.
+                            </p>
+                          )}
                           {aboForm.type === 'vacances_a_vacances' && (
                             <input type="date" value={aboForm.date_fin} onChange={e => setAboForm({ ...aboForm, date_fin: e.target.value })}
                               style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
@@ -670,6 +749,51 @@ export default function CreneauxManager() {
           ))}
         </>
       )}
+
+      <div style={{ background: '#f5f5f5', borderRadius: '14px', padding: '1.2rem', marginTop: '2.5rem', border: '1px dashed #ccc' }}>
+        <h4 style={{ color: '#666', margin: '0 0 0.3rem 0', fontSize: '0.95rem' }}>⚙️ Réglages avancés</h4>
+        <p style={{ color: '#999', fontSize: '0.8rem', margin: '0 0 1rem 0' }}>
+          À utiliser occasionnellement : générer les dates des cours fixes à venir, et déclarer les périodes de vacances scolaires (les cours fixes ne sont jamais générés pendant ces périodes).
+        </p>
+
+        <div style={{ marginBottom: '1.2rem' }}>
+          <button onClick={genererSeances} disabled={generating}
+            style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '8px', cursor: generating ? 'wait' : 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            {generating ? '⏳ Génération...' : '🔄 Générer les prochaines dates de cours fixes'}
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h5 style={{ color: '#666', margin: 0, fontSize: '0.88rem' }}>🏖️ Périodes de vacances scolaires</h5>
+          <button onClick={() => setShowVacancesForm(!showVacancesForm)}
+            style={{ background: '#ddd', color: COLORS.navy, border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+            {showVacancesForm ? '✕ Fermer' : '➕ Ajouter une période'}
+          </button>
+        </div>
+
+        {showVacancesForm && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem', margin: '0.6rem 0' }}>
+            <input placeholder="Ex: Toussaint 2026" value={newVacances.nom} onChange={e => setNewVacances({ ...newVacances, nom: e.target.value })}
+              style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+            <input type="date" value={newVacances.date_debut} onChange={e => setNewVacances({ ...newVacances, date_debut: e.target.value })}
+              style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+            <input type="date" value={newVacances.date_fin} onChange={e => setNewVacances({ ...newVacances, date_fin: e.target.value })}
+              style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+            <button onClick={ajouterVacances}
+              style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.5rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+              Ajouter
+            </button>
+          </div>
+        )}
+
+        {periodesVacances.length === 0 && <p style={{ color: '#aaa', fontSize: '0.85rem' }}>Aucune période enregistrée.</p>}
+        {periodesVacances.map(p => (
+          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0', borderBottom: '1px solid #e5e5e5', fontSize: '0.85rem' }}>
+            <span><strong>{p.nom}</strong> — du {new Date(p.date_debut).toLocaleDateString('fr-FR')} au {new Date(p.date_fin).toLocaleDateString('fr-FR')}</span>
+            <button onClick={() => supprimerVacances(p.id)} style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑️</button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
