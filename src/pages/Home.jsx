@@ -3,6 +3,7 @@ import SlotList from '../components/SlotList'
 import BookingForm from '../components/BookingForm'
 import Calendar from '../components/Calendar'
 import MyBookings from './MyBookings'
+import Demain from './Demain'
 
 const COLORS = {
   navy: '#1a2744',
@@ -19,9 +20,14 @@ export default function Home() {
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [confirmed, setConfirmed] = useState(false)
   const [showMyBookings, setShowMyBookings] = useState(false)
+  const [showDemain, setShowDemain] = useState(false)
 
   if (showMyBookings) {
     return <MyBookings onBack={() => setShowMyBookings(false)} />
+  }
+
+  if (showDemain) {
+    return <Demain onBack={() => setShowDemain(false)} />
   }
 
   return (
@@ -46,6 +52,10 @@ export default function Home() {
           <button onClick={() => setShowMyBookings(true)}
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.7rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
             Mes inscriptions
+          </button>
+          <button onClick={() => setShowDemain(true)}
+            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.7rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+            🐴 Demain
           </button>
           <button onClick={() => setShowSlots(true)}
             style={{ background: COLORS.sky, border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.7rem', borderRadius: '20px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
