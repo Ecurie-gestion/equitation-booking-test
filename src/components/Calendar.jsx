@@ -5,6 +5,7 @@ import { toLocalISODate } from '../lib/dates'
 const COLORS = {
   navy: '#1a2744',
   cours: '#4aa8d8',
+  cours_fixe: '#2c5a8c',
   stage: '#e74c3c',
   concours: '#2ecc71',
   libre: '#f1c40f'
@@ -16,6 +17,7 @@ const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 export default function Calendar({ onSelectSlot }) {
   const [slots, setSlots] = useState([])
   const [events, setEvents] = useState([])
+  const [seances, setSeances] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
   const [currentDate, setCurrentDate] = useState(new Date())
 
@@ -30,6 +32,10 @@ export default function Calendar({ onSelectSlot }) {
     const { data: eventsData } = await supabase
       .from('events')
       .select('*')
+    const { data: seancesData } = await supabase
+      .from('seances')
+      .select('*, creneaux_fixes(heure_debut, heure_fin, niveaux)')
+      .eq('annulee', false)
 
     const eventsAvecPlaces = await Promise.all((eventsData || []).map(async e => {
       if (!e.inscriptible || !e.capacite_max) return { ...e, places_remaining: null }
@@ -42,6 +48,7 @@ export default function Calendar({ onSelectSlot }) {
 
     setSlots(slotsData || [])
     setEvents(eventsAvecPlaces)
+    setSeances(seancesData || [])
   }
 
   function getDaysInMonth(year, month) {
@@ -55,6 +62,16 @@ export default function Calendar({ onSelectSlot }) {
 
   function getEventsForDate(dateStr) {
     const result = []
+    seances.forEach(s => {
+      if (s.date === dateStr) {
+        result.push({
+          type: 'cours_fixe',
+          title: s.creneaux_fixes?.niveaux || 'Cours fixe',
+          time_start: s.creneaux_fixes?.heure_debut,
+          time_end: s.creneaux_fixes?.heure_fin
+        })
+      }
+    })
     slots.forEach(s => {
       if (s.date === dateStr) result.push({ type: 'cours', ...s })
     })
@@ -88,7 +105,7 @@ export default function Calendar({ onSelectSlot }) {
 
       {/* Légende */}
       <div style={{ display: 'flex', gap: '1.2rem', flexWrap: 'wrap', marginBottom: '1.2rem', justifyContent: 'center' }}>
-       {[['cours', 'Cours'], ['stage', 'Stage'], ['concours', 'Concours'], ['libre', 'Événement']].map(([type, label]) => (
+       {[['cours_fixe', 'Cours fixe'], ['cours', 'Créneau libre'], ['stage', 'Stage'], ['concours', 'Concours'], ['libre', 'Événement']].map(([type, label]) => (
           <span key={type} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#555' }}>
             <span style={{ width: '24px', height: '8px', borderRadius: '4px', background: COLORS[type], display: 'inline-block' }} />
             {label}
@@ -185,6 +202,14 @@ export default function Calendar({ onSelectSlot }) {
               background: 'white',
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
             }}>
+              {e.type === 'cours_fixe' && (
+                <>
+                  <strong style={{ color: COLORS.cours_fixe }}>🔒 {e.title}</strong>
+                  <p style={{ margin: '0.2rem 0', color: '#555', fontSize: '0.9rem' }}>
+                    🕐 {e.time_start?.slice(0, 5)} – {e.time_end?.slice(0, 5)}
+                  </p>
+                </>
+              )}
               {e.type === 'cours' && (
                 <>
                   <strong style={{ color: COLORS.navy }}>{e.title}</strong>
