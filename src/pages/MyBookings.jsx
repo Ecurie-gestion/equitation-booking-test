@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { toLocalISODate } from '../lib/dates'
 
 const COLORS = {
   navy: '#1a2744',
@@ -10,14 +11,15 @@ const COLORS = {
 }
 
 export default function MyBookings({ onBack }) {
-  const [email, setEmail] = useState('')
+  const [prenom, setPrenom] = useState('')
+  const [nom, setNom] = useState('')
   const [bookings, setBookings] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   async function fetchMyBookings() {
-    if (!email) {
-      setError('Veuillez entrer votre email.')
+    if (!prenom || !nom) {
+      setError("Veuillez entrer le prénom et le nom de l'élève.")
       return
     }
     setLoading(true)
@@ -26,8 +28,8 @@ export default function MyBookings({ onBack }) {
     const { data, error: fetchError } = await supabase
       .from('bookings')
       .select('*, slots(title, date, time_start, time_end)')
-      .eq('email', email)
-      .order('created_at', { ascending: false })
+      .ilike('child_name', prenom.trim())
+      .ilike('child_nom', nom.trim())
 
     if (fetchError) {
       setError('Une erreur est survenue.')
@@ -35,6 +37,41 @@ export default function MyBookings({ onBack }) {
       setBookings(data)
     }
     setLoading(false)
+  }
+
+  const today = toLocalISODate(new Date())
+  const aVenir = (bookings || [])
+    .filter(b => b.slots?.date >= today)
+    .sort((a, b) => (a.slots?.date || '').localeCompare(b.slots?.date || ''))
+  const passees = (bookings || [])
+    .filter(b => b.slots?.date < today)
+    .sort((a, b) => (b.slots?.date || '').localeCompare(a.slots?.date || ''))
+
+  function CarteReservation({ b, passe }) {
+    return (
+      <div style={{
+        background: passe ? '#f2f2f2' : 'white',
+        borderRadius: '16px',
+        padding: '1.2rem 1.5rem',
+        boxShadow: passe ? 'none' : '0 4px 20px rgba(26,39,68,0.06)',
+        border: passe ? '1px solid #e5e5e5' : 'none',
+        borderLeft: `5px solid ${passe ? '#ccc' : COLORS.sky}`,
+        opacity: passe ? 0.7 : 1
+      }}>
+        <h3 style={{ color: passe ? '#888' : COLORS.navy, margin: '0 0 0.5rem 0', fontSize: '1rem' }}>
+          {b.slots?.title}
+        </h3>
+        <p style={{ margin: '0.2rem 0', color: passe ? '#aaa' : COLORS.textLight, fontSize: '0.9rem' }}>
+          📅 {b.slots?.date ? new Date(b.slots.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
+        </p>
+        <p style={{ margin: '0.2rem 0', color: passe ? '#aaa' : COLORS.textLight, fontSize: '0.9rem' }}>
+          🕐 {b.slots?.time_start?.slice(0,5)} – {b.slots?.time_end?.slice(0,5)}
+        </p>
+        <p style={{ margin: '0.4rem 0 0 0', color: passe ? '#999' : COLORS.navy, fontSize: '0.9rem' }}>
+          🐴 Enfant : <strong>{b.child_name}</strong>
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -57,18 +94,24 @@ export default function MyBookings({ onBack }) {
       <main style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
         <h1 style={{ color: COLORS.navy, fontSize: '1.8rem', marginBottom: '0.5rem' }}>📋 Mes inscriptions</h1>
         <p style={{ color: COLORS.textLight, marginBottom: '2rem' }}>
-          Entrez votre email pour voir vos cours réservés.
+          Entrez le prénom et le nom de l'élève pour voir ses cours réservés.
         </p>
 
         <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 20px rgba(26,39,68,0.06)', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
             <input
-              type="email"
-              placeholder="Votre adresse email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              placeholder="Prénom de l'élève"
+              value={prenom}
+              onChange={e => setPrenom(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && fetchMyBookings()}
-              style={{ flex: 1, minWidth: '200px', padding: '0.7rem 1rem', borderRadius: '8px', border: `2px solid #ddd`, fontSize: '1rem', outline: 'none' }}
+              style={{ flex: 1, minWidth: '160px', padding: '0.7rem 1rem', borderRadius: '8px', border: `2px solid #ddd`, fontSize: '1rem', outline: 'none' }}
+            />
+            <input
+              placeholder="Nom de l'élève"
+              value={nom}
+              onChange={e => setNom(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && fetchMyBookings()}
+              style={{ flex: 1, minWidth: '160px', padding: '0.7rem 1rem', borderRadius: '8px', border: `2px solid #ddd`, fontSize: '1rem', outline: 'none' }}
             />
             <button onClick={fetchMyBookings} disabled={loading}
               style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.7rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
@@ -83,37 +126,28 @@ export default function MyBookings({ onBack }) {
             {bookings.length === 0 ? (
               <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', boxShadow: '0 4px 20px rgba(26,39,68,0.06)' }}>
                 <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</p>
-                <p style={{ color: COLORS.textLight }}>Aucune inscription trouvée pour cet email.</p>
+                <p style={{ color: COLORS.textLight }}>Aucune inscription trouvée pour ce nom.</p>
               </div>
             ) : (
               <div>
                 <p style={{ color: COLORS.textLight, marginBottom: '1rem' }}>
                   {bookings.length} inscription(s) trouvée(s)
                 </p>
-                <div style={{ display: 'grid', gap: '1rem' }}>
-                  {bookings.map(b => (
-                    <div key={b.id} style={{
-                      background: 'white',
-                      borderRadius: '16px',
-                      padding: '1.2rem 1.5rem',
-                      boxShadow: '0 4px 20px rgba(26,39,68,0.06)',
-                      borderLeft: `5px solid ${COLORS.sky}`
-                    }}>
-                      <h3 style={{ color: COLORS.navy, margin: '0 0 0.5rem 0', fontSize: '1rem' }}>
-                        {b.slots?.title}
-                      </h3>
-                      <p style={{ margin: '0.2rem 0', color: COLORS.textLight, fontSize: '0.9rem' }}>
-                        📅 {b.slots?.date ? new Date(b.slots.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
-                      </p>
-                      <p style={{ margin: '0.2rem 0', color: COLORS.textLight, fontSize: '0.9rem' }}>
-                        🕐 {b.slots?.time_start?.slice(0,5)} – {b.slots?.time_end?.slice(0,5)}
-                      </p>
-                      <p style={{ margin: '0.4rem 0 0 0', color: COLORS.navy, fontSize: '0.9rem' }}>
-                        🐴 Enfant : <strong>{b.child_name}</strong>
-                      </p>
+
+                {aVenir.length > 0 && (
+                  <div style={{ display: 'grid', gap: '1rem', marginBottom: passees.length > 0 ? '2rem' : 0 }}>
+                    {aVenir.map(b => <CarteReservation key={b.id} b={b} passe={false} />)}
+                  </div>
+                )}
+
+                {passees.length > 0 && (
+                  <div>
+                    <h4 style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '0.8rem' }}>📁 Passées</h4>
+                    <div style={{ display: 'grid', gap: '0.8rem' }}>
+                      {passees.map(b => <CarteReservation key={b.id} b={b} passe={true} />)}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
