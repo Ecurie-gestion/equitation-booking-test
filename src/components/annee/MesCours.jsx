@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS } from '../../lib/theme'
+import { toLocalISODate } from '../../lib/dates'
 
 // Un cavalier est-il attendu à cette séance fixe, selon son type d'abonnement ?
 function estAttendu(abonnement, dateSeance) {
@@ -40,10 +41,10 @@ export default function MesCours() {
 
   async function fetchTout() {
     setLoading(true)
-    const today = new Date().toISOString().split('T')[0]
+    const today = toLocalISODate(new Date())
     const dansDeuxSemaines = new Date()
     dansDeuxSemaines.setDate(dansDeuxSemaines.getDate() + 14)
-    const dateLimite = dansDeuxSemaines.toISOString().split('T')[0]
+    const dateLimite = toLocalISODate(dansDeuxSemaines)
 
     // Séances des cours fixes
     const { data: seancesData } = await supabase
@@ -172,9 +173,9 @@ export default function MesCours() {
 
   function formatDate(dateStr) {
     const d = new Date(dateStr + 'T12:00:00')
-    const auj = new Date().toISOString().split('T')[0]
+    const auj = toLocalISODate(new Date())
     const demain = new Date(); demain.setDate(demain.getDate() + 1)
-    const demainStr = demain.toISOString().split('T')[0]
+    const demainStr = toLocalISODate(demain)
     if (dateStr === auj) return "Aujourd'hui"
     if (dateStr === demainStr) return 'Demain'
     return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })

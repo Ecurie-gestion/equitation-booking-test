@@ -45,3 +45,11 @@ export const EVENT_TYPES = [
   { value: 'concours', label: '🏆 Concours' },
   { value: 'libre', label: '📌 Événement libre (fête, entraînement...)' }
 ]
+
+export const SOIN_TYPES = [
+  { value: 'vaccin', label: '💉 Vaccin' },
+  { value: 'vermifuge', label: '💊 Vermifuge' },
+  { value: 'ferrage', label: '🔨 Ferrage' },
+  { value: 'dentiste', label: '🦷 Dentiste' },
+  { value: 'autre', label: '📝 Autre soin' }
+]

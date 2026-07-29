@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { toLocalISODate } from '../lib/dates'
 
 const COLORS = {
   navy: '#1a2744',
@@ -24,7 +25,7 @@ export default function Demain({ onBack }) {
     setLoading(true)
     const demain = new Date()
     demain.setDate(demain.getDate() + 1)
-    const dateStr = demain.toISOString().split('T')[0]
+    const dateStr = toLocalISODate(demain)
     setDateAffichee(demain.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }))
 
     const { data: seancesData } = await supabase

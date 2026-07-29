@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import SlotList from '../components/SlotList'
 import BookingForm from '../components/BookingForm'
+import StageInscriptionForm from '../components/StageInscriptionForm'
 import Calendar from '../components/Calendar'
+import InscriptionCoursFixe from '../components/InscriptionCoursFixe'
 import MyBookings from './MyBookings'
 import Demain from './Demain'
 
@@ -21,6 +23,7 @@ export default function Home() {
   const [confirmed, setConfirmed] = useState(false)
   const [showMyBookings, setShowMyBookings] = useState(false)
   const [showDemain, setShowDemain] = useState(false)
+  const [showInscriptionFixe, setShowInscriptionFixe] = useState(false)
 
   if (showMyBookings) {
     return <MyBookings onBack={() => setShowMyBookings(false)} />
@@ -28,6 +31,19 @@ export default function Home() {
 
   if (showDemain) {
     return <Demain onBack={() => setShowDemain(false)} />
+  }
+
+  if (showInscriptionFixe) {
+    return (
+      <div style={{ fontFamily: "'Georgia', serif", background: COLORS.beigeLight, minHeight: '100vh' }}>
+        <header style={{ background: COLORS.navy, padding: '0.9rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
+          <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '48px', mixBlendMode: 'screen', filter: 'invert(1)' }} />
+        </header>
+        <main style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
+          <InscriptionCoursFixe onBack={() => setShowInscriptionFixe(false)} />
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -58,10 +74,6 @@ export default function Home() {
           <button onClick={() => setShowDemain(true)}
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.4rem 0.8rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
             🐴 Demain
-          </button>
-          <button onClick={() => setShowSlots(true)}
-            style={{ background: COLORS.sky, border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.4rem 0.9rem', borderRadius: '20px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
-            Réserver
           </button>
         </nav>
       </header>
@@ -115,7 +127,11 @@ export default function Home() {
               style={{ background: 'none', border: 'none', color: COLORS.navy, cursor: 'pointer', fontSize: '0.95rem', marginBottom: '1rem' }}>
               ← Retour aux créneaux
             </button>
-            <BookingForm slot={selectedSlot} onSuccess={() => setConfirmed(true)} onCancel={() => setSelectedSlot(null)} />
+            {selectedSlot.kind === 'evenement' ? (
+              <StageInscriptionForm stage={selectedSlot} onSuccess={() => setConfirmed(true)} onCancel={() => setSelectedSlot(null)} />
+            ) : (
+              <BookingForm slot={selectedSlot} onSuccess={() => setConfirmed(true)} onCancel={() => setSelectedSlot(null)} />
+            )}
           </div>
 
         ) : showSlots ? (
@@ -124,18 +140,28 @@ export default function Home() {
               style={{ background: 'none', border: 'none', color: COLORS.navy, cursor: 'pointer', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
               ← Retour à l'accueil
             </button>
-            <h2 style={{ color: COLORS.navy, fontSize: '1.5rem', marginBottom: '1.5rem' }}>📋 Créneaux disponibles</h2>
+            <h2 style={{ color: COLORS.navy, fontSize: '1.5rem', marginBottom: '1.5rem' }}>📋 Stages et événements</h2>
             <SlotList onSelectSlot={setSelectedSlot} />
           </div>
 
         ) : (
           <div>
-            <div style={{ background: 'white', borderRadius: '16px', padding: '1.3rem 1.5rem', marginTop: '2rem', boxShadow: '0 4px 20px rgba(26,39,68,0.06)', borderLeft: `4px solid ${COLORS.sky}`, display: 'flex', alignItems: 'flex-start', gap: '0.8rem' }}>
-              <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>ℹ️</span>
-              <p style={{ color: COLORS.text, margin: 0, fontSize: '0.95rem', lineHeight: '1.7' }}>
-                Pour les cours fixes, c'est nous qui nous occupons d'inscrire votre enfant à sa leçon.<br/>
-                Pour les créneaux libres, les stages et les concours, réservez directement en ligne.
-              </p>
+            <p style={{ color: COLORS.navy, textAlign: 'center', fontSize: '1.1rem', margin: '0 0 1.2rem 0', fontWeight: 'bold' }}>
+              Que veux-tu faire ?
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.2rem', marginBottom: '2rem' }}>
+              <button onClick={() => setShowInscriptionFixe(true)}
+                style={{ background: 'white', border: `3px solid ${COLORS.sky}`, borderRadius: '20px', padding: '1.8rem 1.5rem', cursor: 'pointer', textAlign: 'center', boxShadow: '0 6px 24px rgba(26,39,68,0.1)' }}>
+                <div style={{ fontSize: '2.2rem', marginBottom: '0.6rem' }}>📅</div>
+                <div style={{ color: COLORS.navy, fontSize: '1.15rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Cours fixe à l'année</div>
+                <div style={{ color: COLORS.textLight, fontSize: '0.88rem' }}>Un cours régulier, toute l'année, à la même heure</div>
+              </button>
+              <button onClick={() => setShowSlots(true)}
+                style={{ background: COLORS.navy, border: '3px solid transparent', borderRadius: '20px', padding: '1.8rem 1.5rem', cursor: 'pointer', textAlign: 'center', boxShadow: '0 6px 24px rgba(26,39,68,0.15)' }}>
+                <div style={{ fontSize: '2.2rem', marginBottom: '0.6rem' }}>🏆</div>
+                <div style={{ color: 'white', fontSize: '1.15rem', fontWeight: 'bold', marginBottom: '0.4rem' }}>Stages et événements</div>
+                <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.88rem' }}>Créneaux libres, stages, concours ponctuels</div>
+              </button>
             </div>
 
             <p style={{ color: COLORS.textLight, textAlign: 'center', fontSize: '1.05rem', margin: '2rem 0 1rem 0', fontStyle: 'italic' }}>
@@ -144,17 +170,6 @@ export default function Home() {
             <div style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', boxShadow: '0 4px 20px rgba(26,39,68,0.06)', marginBottom: '2rem' }}>
               <h2 style={{ color: COLORS.navy, marginTop: 0, fontSize: '1.3rem' }}>📅 Agenda de l'écurie</h2>
               <Calendar onSelectSlot={setSelectedSlot} />
-            </div>
-
-            <div style={{ background: `linear-gradient(135deg, ${COLORS.navy}, #2d4270)`, borderRadius: '20px', padding: '2.5rem', textAlign: 'center', boxShadow: '0 8px 40px rgba(26,39,68,0.2)' }}>
-              <h2 style={{ color: 'white', marginTop: 0, fontSize: '1.5rem' }}>Tu veux t'inscrire à un cours ? 🐴</h2>
-              <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>
-                N'hésite pas, réserve ta place !
-              </p>
-              <button onClick={() => setShowSlots(true)}
-                style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '1rem 3rem', fontSize: '1.1rem', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' }}>
-                Voir les créneaux disponibles →
-              </button>
             </div>
           </div>
         )}

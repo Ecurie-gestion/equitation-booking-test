@@ -3,10 +3,11 @@ import { supabase } from '../../lib/supabase'
 import { sendEmailsToAll } from '../../lib/email'
 import { COLORS, JOURS_SEMAINE, TYPES_ABONNEMENT, COURS_TYPES } from '../../lib/theme'
 import { upsertCavalierDepuisReservation } from '../../lib/cavaliers'
+import { toLocalISODate } from '../../lib/dates'
 
 const EMPTY_FIXE = { jour_semaine: 1, heure_debut: '18:00', heure_fin: '19:00', niveaux: '', capacite_max: 8 }
 const EMPTY_LIBRE = { title: '', date: '', time_start: '', max_places: 6 }
-const EMPTY_ABO = { cavalier_id: '', type: 'unite', date_debut: new Date().toISOString().split('T')[0], date_fin: '', lecons_totales: 10 }
+const EMPTY_ABO = { cavalier_id: '', type: 'unite', date_debut: toLocalISODate(new Date()), date_fin: '', lecons_totales: 10 }
 const EMPTY_ELEVE = { parent_name: '', child_name: '', child_nom: '', email: '', phone: '' }
 const EMPTY_VACANCES = { nom: '', date_debut: '', date_fin: '' }
 
@@ -18,7 +19,7 @@ function prochainesDates(jourSemaine, nbSemaines) {
   const diff = (jourSemaine - jour.getDay() + 7) % 7
   jour.setDate(jour.getDate() + diff)
   for (let i = 0; i < nbSemaines; i++) {
-    dates.push(new Date(jour).toISOString().split('T')[0])
+    dates.push(toLocalISODate(jour))
     jour.setDate(jour.getDate() + 7)
   }
   return dates
@@ -384,7 +385,7 @@ export default function CreneauxManager() {
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalISODate(new Date())
   const libresAVenir = creneauxLibres.filter(s => s.date >= today)
   const libresPasses = creneauxLibres.filter(s => s.date < today)
 

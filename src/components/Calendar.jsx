@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { toLocalISODate } from '../lib/dates'
 
 const COLORS = {
   navy: '#1a2744',
@@ -29,8 +30,18 @@ export default function Calendar({ onSelectSlot }) {
     const { data: eventsData } = await supabase
       .from('events')
       .select('*')
+
+    const eventsAvecPlaces = await Promise.all((eventsData || []).map(async e => {
+      if (!e.inscriptible || !e.capacite_max) return { ...e, places_remaining: null }
+      const { count } = await supabase
+        .from('event_inscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', e.id)
+      return { ...e, places_remaining: e.capacite_max - (count || 0) }
+    }))
+
     setSlots(slotsData || [])
-    setEvents(eventsData || [])
+    setEvents(eventsAvecPlaces)
   }
 
   function getDaysInMonth(year, month) {
@@ -59,7 +70,7 @@ export default function Calendar({ onSelectSlot }) {
   const month = currentDate.getMonth()
   const daysInMonth = getDaysInMonth(year, month)
   const firstDay = getFirstDayOfMonth(year, month)
-  const today = new Date().toISOString().split('T')[0]
+  const today = toLocalISODate(new Date())
 
   const days = []
   for (let i = 0; i < firstDay; i++) days.push(null)
@@ -184,7 +195,7 @@ export default function Calendar({ onSelectSlot }) {
                     {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
                   </p>
                   {e.places_remaining > 0 && (
-                    <button onClick={() => onSelectSlot(e)}
+                    <button onClick={() => onSelectSlot({ ...e, kind: 'libre' })}
                       style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}>
                       M'inscrire
                     </button>
@@ -198,9 +209,17 @@ export default function Calendar({ onSelectSlot }) {
                     Du {new Date(e.date_start + 'T12:00:00').toLocaleDateString('fr-FR')} au {new Date(e.date_end + 'T12:00:00').toLocaleDateString('fr-FR')}
                   </p>
                   {e.description && <p style={{ margin: '0.2rem 0', color: '#555', fontSize: '0.85rem' }}>{e.description}</p>}
-                  <p style={{ margin: '0.4rem 0 0 0', color: COLORS.stage, fontSize: '0.85rem', fontWeight: 'bold' }}>
-                    📱 Inscription par SMS au 0478/60.56.89
-                  </p>
+                  {e.inscriptible && e.places_remaining !== null && (
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.85rem', fontWeight: 'bold', color: e.places_remaining > 0 ? '#2ecc71' : '#e74c3c' }}>
+                      {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
+                    </p>
+                  )}
+                  {e.inscriptible && (e.places_remaining === null || e.places_remaining > 0) && (
+                    <button onClick={() => onSelectSlot({ ...e, kind: 'evenement' })}
+                      style={{ background: COLORS.stage, color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}>
+                      M'inscrire
+                    </button>
+                  )}
                 </>
               )}
               {e.type === 'concours' && (
@@ -219,6 +238,17 @@ export default function Calendar({ onSelectSlot }) {
                     Du {new Date(e.date_start + 'T12:00:00').toLocaleDateString('fr-FR')} au {new Date(e.date_end + 'T12:00:00').toLocaleDateString('fr-FR')}
                   </p>
                   {e.description && <p style={{ margin: '0.2rem 0', color: '#555', fontSize: '0.85rem' }}>{e.description}</p>}
+                  {e.inscriptible && e.places_remaining !== null && (
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.85rem', fontWeight: 'bold', color: e.places_remaining > 0 ? '#2ecc71' : '#e74c3c' }}>
+                      {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
+                    </p>
+                  )}
+                  {e.inscriptible && (e.places_remaining === null || e.places_remaining > 0) && (
+                    <button onClick={() => onSelectSlot({ ...e, kind: 'evenement' })}
+                      style={{ background: '#b7950b', color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}>
+                      M'inscrire
+                    </button>
+                  )}
                 </>
               )}
             </div>
