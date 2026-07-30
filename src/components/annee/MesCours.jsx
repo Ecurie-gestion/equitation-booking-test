@@ -22,12 +22,29 @@ export default function MesCours() {
   const [ajoutOuvert, setAjoutOuvert] = useState(null)
   const [ajoutId, setAjoutId] = useState('')
   const [message, setMessage] = useState(null)
+  const [packsEpuises, setPacksEpuises] = useState([])
 
   useEffect(() => {
     fetchTout()
     fetchCavaliers()
     fetchChevaux()
+    fetchPacksEpuises()
   }, [])
+
+  async function fetchPacksEpuises() {
+    const { data } = await supabase
+      .from('abonnements')
+      .select('id, cavaliers(prenom, nom), creneaux_fixes(niveaux, heure_debut)')
+      .eq('type', 'dix_lecons')
+      .eq('actif', true)
+      .lte('lecons_restantes', 0)
+    setPacksEpuises(data || [])
+  }
+
+  async function terminerPack(id) {
+    await supabase.from('abonnements').update({ actif: false }).eq('id', id)
+    fetchPacksEpuises()
+  }
 
   async function fetchCavaliers() {
     const { data } = await supabase.from('cavaliers').select('*').eq('actif', true).order('nom')
@@ -159,6 +176,7 @@ export default function MesCours() {
           const delta = consommeMaintenant ? -1 : 1
           const restantes = Math.max(0, (abo.lecons_restantes || 0) + delta)
           await supabase.from('abonnements').update({ lecons_restantes: restantes }).eq('id', abo.id)
+          fetchPacksEpuises()
         }
       }
     }
@@ -218,6 +236,17 @@ export default function MesCours() {
         <div style={{ background: message.type === 'success' ? '#d4edda' : '#f8d7da', color: message.type === 'success' ? '#155724' : '#721c24', padding: '0.6rem 1rem', borderRadius: '8px', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.9rem' }}>{message.text}</span>
           <button onClick={() => setMessage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
+        </div>
+      )}
+
+      {packsEpuises.length > 0 && (
+        <div style={{ background: '#fff3cd', color: '#856404', padding: '0.8rem 1rem', borderRadius: '10px', marginBottom: '1.2rem', border: '1px solid #ffe69c' }}>
+          <strong style={{ display: 'block', marginBottom: '0.3rem' }}>⚠️ Pack de 10 leçons épuisé</strong>
+          {packsEpuises.map(p => (
+            <div key={p.id} style={{ fontSize: '0.88rem' }}>
+              {p.cavaliers?.prenom} {p.cavaliers?.nom} — {p.creneaux_fixes?.niveaux || 'cours fixe'} ({p.creneaux_fixes?.heure_debut?.slice(0, 5)})
+            </div>
+          ))}
         </div>
       )}
 
