@@ -17,7 +17,7 @@ const JOURS_SEMAINE = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendr
 
 const FORMULES = [
   { value: 'unite', emoji: '1️⃣', label: 'Un seul cours', desc: 'Pour essayer, ou pour une fois ponctuellement.' },
-  { value: 'dix_lecons', emoji: '🔟', label: 'Pack de 10 cours', desc: 'Un cours régulier, à la même heure chaque semaine.' },
+  { value: 'dix_lecons', emoji: '🔟', label: 'Pack de 10 cours', desc: 'Un ou plusieurs cours réguliers, chaque semaine.' },
   { value: 'vacances_a_vacances', emoji: '📅', label: 'Toute la période', desc: "Inscrit chaque semaine jusqu'aux prochaines vacances." }
 ]
 
@@ -39,7 +39,7 @@ export default function InscriptionCoursFixe({ onBack }) {
   const [loading, setLoading] = useState(true)
 
   const [selectedCreneauIds, setSelectedCreneauIds] = useState([]) // vacances_a_vacances : multi
-  const [selectedCreneauUnique, setSelectedCreneauUnique] = useState('') // dix_lecons : un seul cours
+  const [selectedCreneauIdsDix, setSelectedCreneauIdsDix] = useState([]) // dix_lecons : multi aussi
   const [selectedSeanceId, setSelectedSeanceId] = useState('') // unite : une date précise
 
   const [child, setChild] = useState(EMPTY_CHILD)
@@ -79,6 +79,10 @@ export default function InscriptionCoursFixe({ onBack }) {
     setSelectedCreneauIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
+  function toggleCreneauDix(id) {
+    setSelectedCreneauIdsDix(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
   function seancesPourCreneau(creneauId) {
     return seances.filter(s => s.creneau_fixe_id === creneauId)
   }
@@ -90,7 +94,7 @@ export default function InscriptionCoursFixe({ onBack }) {
   function choisirFormule(f) {
     setFormule(f)
     setSelectedCreneauIds([])
-    setSelectedCreneauUnique('')
+    setSelectedCreneauIdsDix([])
     setSelectedSeanceId('')
     setMessage(null)
   }
@@ -116,14 +120,13 @@ export default function InscriptionCoursFixe({ onBack }) {
         creneau_fixe_id: id, type: 'vacances_a_vacances', date_debut: today, date_fin: dateFin
       }))
     } else if (formule === 'dix_lecons') {
-      if (!selectedCreneauUnique) {
-        setMessage({ type: 'error', text: 'Choisis un cours.' })
+      if (selectedCreneauIdsDix.length === 0) {
+        setMessage({ type: 'error', text: 'Coche au moins un cours.' })
         return
       }
-      rows = [{
-        creneau_fixe_id: selectedCreneauUnique, type: 'dix_lecons',
-        date_debut: today, lecons_totales: 10, lecons_restantes: 10
-      }]
+      rows = selectedCreneauIdsDix.map(id => ({
+        creneau_fixe_id: id, type: 'dix_lecons', date_debut: today, lecons_totales: 10, lecons_restantes: 10
+      }))
     } else if (formule === 'unite') {
       if (!selectedSeanceId) {
         setMessage({ type: 'error', text: 'Choisis une date.' })
@@ -242,8 +245,8 @@ export default function InscriptionCoursFixe({ onBack }) {
 
           {formule === 'dix_lecons' && (
             <div style={{ background: 'white', borderRadius: '16px', padding: '1.3rem', marginBottom: '1.5rem', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-              <h4 style={{ marginTop: 0, color: COLORS.navy, fontSize: '1rem' }}>Choisis le cours (jour et heure)</h4>
-              <p style={{ color: COLORS.textLight, fontSize: '0.85rem', marginTop: '-0.5rem' }}>Les 10 cours seront décomptés au fur et à mesure des présences, sur ce créneau.</p>
+              <h4 style={{ marginTop: 0, color: COLORS.navy, fontSize: '1rem' }}>Coche un ou plusieurs cours</h4>
+              <p style={{ color: COLORS.textLight, fontSize: '0.85rem', marginTop: '-0.5rem' }}>Les 10 cours seront décomptés au fur et à mesure des présences, sur le ou les créneaux choisis.</p>
               {creneaux.length === 0 && <p style={{ color: '#888' }}>Aucun cours disponible pour le moment.</p>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {creneaux.map(cr => {
@@ -253,10 +256,10 @@ export default function InscriptionCoursFixe({ onBack }) {
                     <label key={cr.id} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem',
                       cursor: complet ? 'not-allowed' : 'pointer', padding: '0.7rem 0.9rem', borderRadius: '10px',
-                      background: selectedCreneauUnique === cr.id ? COLORS.skyLight : '#f7f7f7', opacity: complet ? 0.5 : 1
+                      background: selectedCreneauIdsDix.includes(cr.id) ? COLORS.skyLight : '#f7f7f7', opacity: complet ? 0.5 : 1
                     }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <input type="radio" name="creneau_dix" disabled={complet} checked={selectedCreneauUnique === cr.id} onChange={() => setSelectedCreneauUnique(cr.id)}
+                        <input type="checkbox" disabled={complet} checked={selectedCreneauIdsDix.includes(cr.id)} onChange={() => toggleCreneauDix(cr.id)}
                           style={{ width: '16px', height: '16px', cursor: complet ? 'not-allowed' : 'pointer', accentColor: COLORS.navy }} />
                         <strong style={{ color: COLORS.navy }}>{labelCreneau(cr)}</strong>
                       </span>
