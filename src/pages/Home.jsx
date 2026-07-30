@@ -6,6 +6,7 @@ import Calendar from '../components/Calendar'
 import InscriptionCoursFixe from '../components/InscriptionCoursFixe'
 import MyBookings from './MyBookings'
 import Demain from './Demain'
+import PrivacyPolicy from './PrivacyPolicy'
 
 const COLORS = {
   navy: '#1a2744',
@@ -24,6 +25,7 @@ export default function Home() {
   const [showMyBookings, setShowMyBookings] = useState(false)
   const [showDemain, setShowDemain] = useState(false)
   const [showInscriptionFixe, setShowInscriptionFixe] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
 
   if (showMyBookings) {
     return <MyBookings onBack={() => setShowMyBookings(false)} />
@@ -31,6 +33,10 @@ export default function Home() {
 
   if (showDemain) {
     return <Demain onBack={() => setShowDemain(false)} />
+  }
+
+  if (showPrivacy) {
+    return <PrivacyPolicy onBack={() => setShowPrivacy(false)} />
   }
 
   if (showInscriptionFixe) {
@@ -194,9 +200,13 @@ export default function Home() {
           </div>
         </div>
         <div style={{ maxWidth: '900px', margin: '2rem auto 0 auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', textAlign: 'center' }}>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: 0 }}>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: '0 0 0.6rem 0' }}>
             © 2026 Ecurie de Groynne — Tous droits réservés — Avec ❤️ par l'équipe Ecurie de Groynne
           </p>
+          <button onClick={() => setShowPrivacy(true)}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.78rem' }}>
+            Politique de confidentialité
+          </button>
         </div>
       </footer>
 

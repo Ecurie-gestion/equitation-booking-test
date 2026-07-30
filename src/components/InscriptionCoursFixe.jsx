@@ -313,8 +313,14 @@ export default function InscriptionCoursFixe({ onBack }) {
                 <input placeholder="GSM" value={child.phone} onChange={e => setChild({ ...child, phone: e.target.value })} style={inputStyle} />
               </div>
 
+              <p style={{ color: '#888', fontSize: '0.78rem', lineHeight: '1.6', margin: '1rem 0 0 0' }}>
+                Les informations recueillies sont nécessaires à l'organisation des leçons et pour vous contacter en cas
+                de besoin concernant votre enfant. Elles sont réservées à l'équipe de l'Écurie de Groynne et ne sont
+                jamais transmises à des tiers. <a href="/confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: COLORS.sky }}>En savoir plus</a>.
+              </p>
+
               <button onClick={soumettre} disabled={submitting}
-                style={{ marginTop: '1.2rem', background: COLORS.sky, color: 'white', border: 'none', padding: '0.9rem 2rem', borderRadius: '50px', cursor: submitting ? 'wait' : 'pointer', fontSize: '1rem', fontWeight: 'bold', width: '100%' }}>
+                style={{ marginTop: '0.8rem', background: COLORS.sky, color: 'white', border: 'none', padding: '0.9rem 2rem', borderRadius: '50px', cursor: submitting ? 'wait' : 'pointer', fontSize: '1rem', fontWeight: 'bold', width: '100%' }}>
                 {submitting ? 'Envoi...' : "Confirmer l'inscription"}
               </button>
             </div>

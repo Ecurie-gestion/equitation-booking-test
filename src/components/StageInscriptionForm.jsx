@@ -142,6 +142,12 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
           />
         </div>
 
+        <p style={{ color: '#888', fontSize: '0.78rem', lineHeight: '1.6', margin: '0.3rem 0' }}>
+          Les informations recueillies sont nécessaires à l'organisation des leçons et pour vous contacter en cas
+          de besoin concernant votre enfant. Elles sont réservées à l'équipe de l'Écurie de Groynne et ne sont
+          jamais transmises à des tiers. <a href="/confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: '#4aa8d8' }}>En savoir plus</a>.
+        </p>
+
         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
           <button
             type="submit"
