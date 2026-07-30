@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { supabase } from '../../lib/supabase'
-import { COLORS, NIVEAUX } from '../../lib/theme'
+import { COLORS, NIVEAUX, TYPES_ABONNEMENT, JOURS_SEMAINE } from '../../lib/theme'
 
 const EMPTY = { prenom: '', nom: '', parent_nom: '', email: '', telephone: '', niveau: '' }
 
@@ -12,6 +12,10 @@ export default function CavaliersManager() {
   const [showInactifs, setShowInactifs] = useState(false)
   const [message, setMessage] = useState(null)
 
+  // Historique (abonnements + leçons prises)
+  const [historiqueOuvert, setHistoriqueOuvert] = useState(null)
+  const [historique, setHistorique] = useState({})
+
   useEffect(() => { fetchCavaliers() }, [showInactifs])
 
   async function fetchCavaliers() {
@@ -19,6 +23,57 @@ export default function CavaliersManager() {
     if (!showInactifs) query = query.eq('actif', true)
     const { data } = await query
     setCavaliers(data || [])
+  }
+
+  async function fetchHistorique(cavalier) {
+    const { data: abonnements } = await supabase
+      .from('abonnements')
+      .select('*, creneaux_fixes(jour_semaine, heure_debut, heure_fin, niveaux)')
+      .eq('cavalier_id', cavalier.id)
+      .order('date_debut', { ascending: false })
+
+    const { data: presencesFixe } = await supabase
+      .from('presences')
+      .select('*, seances(date, creneaux_fixes(niveaux, heure_debut))')
+      .eq('cavalier_id', cavalier.id)
+
+    const { data: bookingsLibre } = await supabase
+      .from('bookings')
+      .select('*, slots(title, date, time_start)')
+      .eq('child_name', cavalier.prenom)
+      .eq('child_nom', cavalier.nom)
+
+    const lecons = [
+      ...(presencesFixe || []).map(p => ({
+        id: `p-${p.id}`,
+        date: p.seances?.date,
+        label: p.seances?.creneaux_fixes?.niveaux || 'Cours fixe',
+        heure: p.seances?.creneaux_fixes?.heure_debut?.slice(0, 5),
+        present: p.present,
+        kind: 'fixe'
+      })),
+      ...(bookingsLibre || []).map(b => ({
+        id: `b-${b.id}`,
+        date: b.slots?.date,
+        label: b.slots?.title || 'Créneau libre',
+        heure: b.slots?.time_start?.slice(0, 5),
+        present: b.present,
+        kind: 'libre'
+      }))
+    ]
+      .filter(l => l.date)
+      .sort((a, b) => b.date.localeCompare(a.date))
+
+    setHistorique(prev => ({ ...prev, [cavalier.id]: { abonnements: abonnements || [], lecons } }))
+  }
+
+  function toggleHistorique(cavalier) {
+    if (historiqueOuvert === cavalier.id) {
+      setHistoriqueOuvert(null)
+    } else {
+      setHistoriqueOuvert(cavalier.id)
+      fetchHistorique(cavalier)
+    }
   }
 
   function startAdd() {
@@ -143,8 +198,11 @@ export default function CavaliersManager() {
               </tr>
             </thead>
             <tbody>
-              {cavaliers.map(c => (
-                <tr key={c.id} style={{ opacity: c.actif ? 1 : 0.5, borderBottom: '1px solid #eee' }}>
+              {cavaliers.map(c => {
+                const hist = historique[c.id]
+                return (
+                <Fragment key={c.id}>
+                <tr style={{ opacity: c.actif ? 1 : 0.5, borderBottom: historiqueOuvert === c.id ? 'none' : '1px solid #eee' }}>
                   <td style={{ padding: '0.5rem' }}>{c.prenom}</td>
                   <td style={{ padding: '0.5rem' }}>{c.nom}</td>
                   <td style={{ padding: '0.5rem' }}>{c.parent_nom || '—'}</td>
@@ -152,6 +210,8 @@ export default function CavaliersManager() {
                   <td style={{ padding: '0.5rem' }}>{c.email || '—'}</td>
                   <td style={{ padding: '0.5rem' }}>{c.telephone || '—'}</td>
                   <td style={{ padding: '0.5rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    <button onClick={() => toggleHistorique(c)} title="Historique"
+                      style={{ background: historiqueOuvert === c.id ? COLORS.navy : COLORS.sky, color: 'white', border: 'none', padding: '0.3rem 0.6rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', marginRight: '0.3rem', whiteSpace: 'nowrap' }}>📜 Historique</button>
                     <button onClick={() => startEdit(c)} title="Modifier"
                       style={{ background: COLORS.orange, color: 'white', border: 'none', padding: '0.3rem 0.5rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem', marginRight: '0.3rem' }}>✏️</button>
                     <button onClick={() => toggleActif(c)} title={c.actif ? 'Désactiver' : 'Réactiver'}
@@ -162,7 +222,58 @@ export default function CavaliersManager() {
                       style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.3rem 0.5rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑️</button>
                   </td>
                 </tr>
-              ))}
+                {historiqueOuvert === c.id && (
+                  <tr style={{ borderBottom: '1px solid #eee' }}>
+                    <td colSpan={7} style={{ padding: '1rem', background: '#f7fafc' }}>
+                      <h4 style={{ color: COLORS.navy, margin: '0 0 0.6rem 0', fontSize: '0.9rem' }}>📜 Historique de {c.prenom} {c.nom}</h4>
+
+                      <h5 style={{ color: '#666', margin: '0 0 0.4rem 0', fontSize: '0.82rem' }}>Abonnements</h5>
+                      {!hist && <p style={{ color: '#aaa', fontSize: '0.85rem' }}>Chargement...</p>}
+                      {hist && hist.abonnements.length === 0 && <p style={{ color: '#aaa', fontSize: '0.85rem' }}>Aucun abonnement enregistré.</p>}
+                      {hist && hist.abonnements.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '1rem' }}>
+                          {hist.abonnements.map(a => (
+                            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'white', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.82rem', opacity: a.actif ? 1 : 0.6 }}>
+                              <strong style={{ color: COLORS.navy }}>{TYPES_ABONNEMENT.find(t => t.value === a.type)?.label || a.type}</strong>
+                              {a.creneaux_fixes && (
+                                <span style={{ color: '#888' }}>
+                                  {JOURS_SEMAINE[a.creneaux_fixes.jour_semaine]} {a.creneaux_fixes.heure_debut?.slice(0, 5)} · {a.creneaux_fixes.niveaux}
+                                </span>
+                              )}
+                              <span style={{ color: '#888' }}>
+                                {a.type === 'dix_lecons' && `${a.lecons_restantes}/${a.lecons_totales} restantes`}
+                                {a.type === 'vacances_a_vacances' && `du ${new Date(a.date_debut).toLocaleDateString('fr-FR')}${a.date_fin ? ` au ${new Date(a.date_fin).toLocaleDateString('fr-FR')}` : ''}`}
+                                {a.type === 'unite' && `le ${new Date(a.date_debut).toLocaleDateString('fr-FR')}`}
+                              </span>
+                              {!a.actif && <span style={{ color: '#aaa', fontStyle: 'italic' }}>(terminé)</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <h5 style={{ color: '#666', margin: '0 0 0.4rem 0', fontSize: '0.82rem' }}>Leçons prises</h5>
+                      {hist && hist.lecons.length === 0 && <p style={{ color: '#aaa', fontSize: '0.85rem' }}>Aucune leçon enregistrée.</p>}
+                      {hist && hist.lecons.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '220px', overflowY: 'auto' }}>
+                          {hist.lecons.map(l => (
+                            <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'white', borderRadius: '6px', padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}>
+                              <span style={{ color: COLORS.navy, fontWeight: 'bold' }}>{new Date(l.date + 'T12:00:00').toLocaleDateString('fr-FR')}</span>
+                              <span style={{ color: '#888' }}>{l.heure}</span>
+                              <span style={{ color: '#555' }}>{l.label}</span>
+                              <span style={{ color: '#aaa' }}>{l.kind === 'fixe' ? '🔒 fixe' : '🌐 libre'}</span>
+                              {l.present === true && <span style={{ color: COLORS.green, fontWeight: 'bold' }}>✓ présent</span>}
+                              {l.present === false && <span style={{ color: COLORS.red, fontWeight: 'bold' }}>✕ absent</span>}
+                              {l.present === null && <span style={{ color: '#ccc' }}>—</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>
