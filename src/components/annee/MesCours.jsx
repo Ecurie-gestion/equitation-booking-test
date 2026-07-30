@@ -74,6 +74,7 @@ export default function MesCours() {
         id: `fixe-${s.id}`,
         rawId: s.id,
         kind: 'fixe',
+        creneauFixeId: s.creneau_fixe_id,
         date: s.date,
         heure: s.creneaux_fixes?.heure_debut?.slice(0, 5) || '',
         label: s.creneaux_fixes?.niveaux || 'Cours fixe',
@@ -136,7 +137,32 @@ export default function MesCours() {
 
   async function marquerPresence(item, rider, present) {
     const table = item.kind === 'fixe' ? 'presences' : 'bookings'
+    const ancienPresent = rider.present
     await supabase.from(table).update({ present }).eq('id', rider.rowId)
+
+    // Pack de 10 leçons : une présence consomme une leçon, une absence ne consomme rien
+    // (et on rend la leçon si on annule une présence déjà pointée).
+    if (item.kind === 'fixe') {
+      const consommaitAvant = ancienPresent === true
+      const consommeMaintenant = present === true
+      if (consommaitAvant !== consommeMaintenant) {
+        const { data: abo } = await supabase
+          .from('abonnements')
+          .select('id, lecons_restantes')
+          .eq('cavalier_id', rider.cavalier_id)
+          .eq('creneau_fixe_id', item.creneauFixeId)
+          .eq('type', 'dix_lecons')
+          .eq('actif', true)
+          .limit(1)
+          .maybeSingle()
+        if (abo) {
+          const delta = consommeMaintenant ? -1 : 1
+          const restantes = Math.max(0, (abo.lecons_restantes || 0) + delta)
+          await supabase.from('abonnements').update({ lecons_restantes: restantes }).eq('id', abo.id)
+        }
+      }
+    }
+
     rafraichirUnCours(item)
   }
 

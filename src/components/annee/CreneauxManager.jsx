@@ -555,7 +555,7 @@ export default function CreneauxManager() {
                               <td style={{ padding: '0.4rem' }}>{TYPES_ABONNEMENT.find(t => t.value === a.type)?.label}</td>
                               <td style={{ padding: '0.4rem' }}>
                                 {a.type === 'dix_lecons' && `${a.lecons_restantes}/${a.lecons_totales} restantes`}
-                                {a.type === 'vacances_a_vacances' && a.date_fin && `Jusqu'au ${new Date(a.date_fin).toLocaleDateString('fr-FR')}`}
+                                {a.type === 'vacances_a_vacances' && `Du ${new Date(a.date_debut).toLocaleDateString('fr-FR')}${a.date_fin ? ` au ${new Date(a.date_fin).toLocaleDateString('fr-FR')}` : ''}`}
                                 {a.type === 'unite' && `Le ${new Date(a.date_debut).toLocaleDateString('fr-FR')}`}
                               </td>
                               <td style={{ padding: '0.4rem', textAlign: 'center' }}>
