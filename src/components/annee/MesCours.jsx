@@ -243,8 +243,15 @@ export default function MesCours() {
         <div style={{ background: '#fff3cd', color: '#856404', padding: '0.8rem 1rem', borderRadius: '10px', marginBottom: '1.2rem', border: '1px solid #ffe69c' }}>
           <strong style={{ display: 'block', marginBottom: '0.3rem' }}>⚠️ Pack de 10 leçons épuisé</strong>
           {packsEpuises.map(p => (
-            <div key={p.id} style={{ fontSize: '0.88rem' }}>
-              {p.cavaliers?.prenom} {p.cavaliers?.nom} — {p.creneaux_fixes?.niveaux || 'cours fixe'} ({p.creneaux_fixes?.heure_debut?.slice(0, 5)})
+            <div key={p.id} style={{ fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+              <span>{p.cavaliers?.prenom} {p.cavaliers?.nom} — {p.creneaux_fixes?.niveaux || 'cours fixe'} ({p.creneaux_fixes?.heure_debut?.slice(0, 5)})</span>
+              <button
+                onClick={() => terminerPack(p.id)}
+                style={{ fontSize: '0.8rem', background: 'none', border: '1px solid #856404', color: '#856404', borderRadius: '6px', padding: '0.15rem 0.5rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                title="Marquer ce pack comme terminé (le retire de cette alerte)"
+              >
+                ✓ Pack terminé
+              </button>
             </div>
           ))}
         </div>
