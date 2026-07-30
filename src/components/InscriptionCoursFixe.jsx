@@ -246,7 +246,7 @@ export default function InscriptionCoursFixe({ onBack }) {
           {formule === 'dix_lecons' && (
             <div style={{ background: 'white', borderRadius: '16px', padding: '1.3rem', marginBottom: '1.5rem', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
               <h4 style={{ marginTop: 0, color: COLORS.navy, fontSize: '1rem' }}>Coche un ou plusieurs cours</h4>
-              <p style={{ color: COLORS.textLight, fontSize: '0.85rem', marginTop: '-0.5rem' }}>Les 10 cours seront décomptés au fur et à mesure des présences, sur le ou les créneaux choisis.</p>
+              <p style={{ color: COLORS.textLight, fontSize: '0.85rem', marginTop: '-0.5rem' }}>Les 10 cours seront décomptés au fur et à mesure des présences.</p>
               {creneaux.length === 0 && <p style={{ color: '#888' }}>Aucun cours disponible pour le moment.</p>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {creneaux.map(cr => {
