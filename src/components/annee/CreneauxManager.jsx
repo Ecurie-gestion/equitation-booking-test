@@ -734,20 +734,70 @@ export default function CreneauxManager() {
 
       {libresPasses.length > 0 && (
         <>
-          <h4 style={{ color: '#888', marginTop: '1.5rem', fontSize: '0.9rem' }}>📁 Créneaux libres passés</h4>
-          {libresPasses.map(slot => (
-            <div key={slot.id} style={{ background: '#f9f9f9', borderRadius: '12px', marginBottom: '0.6rem', border: '1px solid #eee', padding: '0.6rem 1rem', opacity: 0.85, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ fontSize: '0.9rem' }}>
-                <span style={{ color: '#888', marginRight: '0.5rem' }}>{new Date(slot.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                <strong style={{ color: '#555' }}>{slot.title}</strong>
+          <h4 style={{ color: '#888', marginTop: '1.5rem', fontSize: '0.9rem' }}>📁 Créneaux libres passés (clique pour voir les inscrits)</h4>
+          {libresPasses.map(slot => {
+            const key = `libre-${slot.id}`
+            return (
+              <div key={key} style={{ background: '#f9f9f9', borderRadius: '12px', marginBottom: '0.6rem', border: `2px solid ${openItem === key ? '#aaa' : '#eee'}`, overflow: 'hidden' }}>
+                <div onClick={() => toggleOpen(key, false)}
+                  style={{ padding: '0.7rem 1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ fontSize: '0.9rem' }}>
+                    <span style={{ color: '#888', marginRight: '0.5rem' }}>{new Date(slot.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                    <strong style={{ color: '#555' }}>{slot.title}</strong>
+                    <span style={{ color: '#aaa', marginLeft: '0.4rem', fontSize: '0.85rem' }}>à {slot.time_start.slice(0, 5)}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span style={{ color: '#aaa', fontSize: '0.82rem' }}>{slot.booked_count} inscrit{slot.booked_count > 1 ? 's' : ''}</span>
+                    <span style={{ color: '#999' }}>{openItem === key ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+
+                {openItem === key && (
+                  <div style={{ borderTop: '2px solid #eee', padding: '0.8rem 1rem' }}>
+                    {bookings[slot.id] && bookings[slot.id].length > 0 && (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '0.8rem' }}>
+                        <thead>
+                          <tr style={{ background: '#eee' }}>
+                            <th style={{ padding: '0.4rem', textAlign: 'left' }}>Parent</th>
+                            <th style={{ padding: '0.4rem', textAlign: 'left' }}>Enfant</th>
+                            <th style={{ padding: '0.4rem', textAlign: 'left' }}>Email</th>
+                            <th style={{ padding: '0.4rem', textAlign: 'left' }}>Tél.</th>
+                            <th style={{ padding: '0.4rem', textAlign: 'left' }}>Cheval</th>
+                            <th style={{ padding: '0.4rem', textAlign: 'center' }}>❌</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bookings[slot.id].map(b => (
+                            <tr key={b.id}>
+                              <td style={{ padding: '0.4rem' }}>{b.parent_name || '—'}</td>
+                              <td style={{ padding: '0.4rem' }}>{b.child_name} {b.child_nom}</td>
+                              <td style={{ padding: '0.4rem' }}>{b.email ? <a href={`mailto:${b.email}`} style={{ color: COLORS.sky }}>{b.email}</a> : '—'}</td>
+                              <td style={{ padding: '0.4rem' }}>{b.phone || '—'}</td>
+                              <td style={{ padding: '0.4rem' }}>
+                                <select value={b.cheval_id || ''} onChange={e => assignerChevalBooking(b.id, e.target.value, slot.id)}
+                                  style={{ padding: '0.25rem', borderRadius: '5px', border: '1px solid #ddd', fontSize: '0.8rem' }}>
+                                  <option value="">—</option>
+                                  {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}</option>)}
+                                </select>
+                              </td>
+                              <td style={{ padding: '0.4rem', textAlign: 'center' }}>
+                                <button onClick={() => deleteBooking(b.id, slot.id)} style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑️</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    {bookings[slot.id] && bookings[slot.id].length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>Aucun inscrit.</p>}
+
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
+                      <button onClick={() => deleteLibre(slot.id)} style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' }}>🗑️ Supprimer le créneau</button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ color: '#aaa', fontSize: '0.82rem' }}>{slot.booked_count} inscrits</span>
-                <button onClick={() => deleteLibre(slot.id)}
-                  style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.3rem 0.6rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑️ Supprimer</button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </>
       )}
 
