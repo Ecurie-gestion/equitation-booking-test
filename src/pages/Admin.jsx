@@ -58,7 +58,7 @@ export default function Admin() {
 
   const Header = () => (
     <header style={{ background: COLORS.navy, padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '60px', mixBlendMode: 'screen', filter: 'invert(1)' }} />
+      <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '60px' }} />
     </header>
   )
 

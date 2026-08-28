@@ -43,7 +43,7 @@ export default function Home() {
     return (
       <div style={{ fontFamily: "'Georgia', serif", background: COLORS.beigeLight, minHeight: '100vh' }}>
         <header style={{ background: COLORS.navy, padding: '0.9rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
-          <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '48px', mixBlendMode: 'screen', filter: 'invert(1)' }} />
+          <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '48px' }} />
         </header>
         <main style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
           <InscriptionCoursFixe onBack={() => setShowInscriptionFixe(false)} />
@@ -67,7 +67,7 @@ export default function Home() {
         zIndex: 100,
         boxShadow: '0 2px 20px rgba(0,0,0,0.3)'
       }}>
-        <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '48px', mixBlendMode: 'screen', filter: 'invert(1)' }} />
+        <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '48px' }} />
         <nav style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button onClick={() => { setShowSlots(false); setSelectedSlot(null); setConfirmed(false) }}
             style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '0.85rem', opacity: 0.8, whiteSpace: 'nowrap' }}>
@@ -184,7 +184,7 @@ export default function Home() {
       <footer style={{ background: COLORS.navy, color: 'white', padding: '3rem 2rem', marginTop: '3rem' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
           <div>
-            <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '50px', mixBlendMode: 'screen', filter: 'invert(1)', marginBottom: '1rem' }} />
+            <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '50px', marginBottom: '1rem' }} />
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: '1.8' }}>
               Votre écurie de confiance pour des cours d'équitation de qualité.
             </p>

@@ -12,7 +12,7 @@ export default function PrivacyPolicy({ onBack }) {
   return (
     <div style={{ fontFamily: "'Georgia', serif", background: COLORS.beigeLight, minHeight: '100vh' }}>
       <header style={{ background: COLORS.navy, padding: '0.9rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
-        <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '48px', mixBlendMode: 'screen', filter: 'invert(1)' }} />
+        <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '48px' }} />
       </header>
       <main style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem 3rem 1rem' }}>
         {onBack && (

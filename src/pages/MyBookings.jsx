@@ -84,7 +84,7 @@ export default function MyBookings({ onBack }) {
         justifyContent: 'space-between',
         boxShadow: '0 2px 20px rgba(0,0,0,0.3)'
       }}>
-        <img src="/logo.png" alt="Ecurie de Groynne" style={{ height: '60px', mixBlendMode: 'screen', filter: 'invert(1)' }} />
+        <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '60px' }} />
         <button onClick={onBack}
           style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.9rem', padding: '0.4rem 1rem', borderRadius: '20px' }}>
           ← Retour
