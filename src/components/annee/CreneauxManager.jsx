@@ -4,6 +4,7 @@ import { sendEmailsToAll } from '../../lib/email'
 import { COLORS, JOURS_SEMAINE, TYPES_ABONNEMENT, COURS_TYPES } from '../../lib/theme'
 import { upsertCavalierDepuisReservation } from '../../lib/cavaliers'
 import { toLocalISODate } from '../../lib/dates'
+import EleveSelector from '../admin/EleveSelector'
 
 const EMPTY_FIXE = { jour_semaine: 1, heure_debut: '18:00', heure_fin: '19:00', niveaux: '', capacite_max: 8 }
 const EMPTY_LIBRE = { title: '', date: '', time_start: '', max_places: 6 }
@@ -358,13 +359,13 @@ export default function CreneauxManager() {
   }
 
   async function addEleve(slotId) {
-    if (!newEleve.child_name) {
-      setMessage({ type: 'error', text: "Le nom et prénom de l'élève sont obligatoires." })
+    if (!newEleve.child_name || !newEleve.child_nom) {
+      setMessage({ type: 'error', text: "Le prénom et le nom de l'élève sont obligatoires." })
       return
     }
-    const { error } = await supabase.from('bookings').insert({ ...newEleve, slot_id: slotId })
+    const cavalierId = await upsertCavalierDepuisReservation(newEleve)
+    const { error } = await supabase.from('bookings').insert({ ...newEleve, slot_id: slotId, cavalier_id: cavalierId })
     if (!error) {
-      await upsertCavalierDepuisReservation(newEleve)
       setMessage({ type: 'success', text: 'Élève ajouté !' })
       setNewEleve(EMPTY_ELEVE)
       setAddingEleve(null)
@@ -705,11 +706,7 @@ export default function CreneauxManager() {
                     {addingEleve === slot.id ? (
                       <div style={{ background: COLORS.skyLight, borderRadius: '8px', padding: '0.8rem', marginBottom: '0.8rem' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                          <input placeholder="Prénom élève *" value={newEleve.child_name} onChange={e => setNewEleve({ ...newEleve, child_name: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                          <input placeholder="Nom élève *" value={newEleve.child_nom} onChange={e => setNewEleve({ ...newEleve, child_nom: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                          <input placeholder="Nom prénom parent (optionnel)" value={newEleve.parent_name} onChange={e => setNewEleve({ ...newEleve, parent_name: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                          <input placeholder="Email (optionnel)" value={newEleve.email} onChange={e => setNewEleve({ ...newEleve, email: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                          <input placeholder="Tél. (optionnel)" value={newEleve.phone} onChange={e => setNewEleve({ ...newEleve, phone: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                          <EleveSelector cavaliers={cavaliers} value={newEleve} onChange={setNewEleve} />
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button onClick={() => addEleve(slot.id)} style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Confirmer</button>

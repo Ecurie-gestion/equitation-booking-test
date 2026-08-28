@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS, EVENT_TYPES } from '../../lib/theme'
 import { upsertCavalierDepuisReservation } from '../../lib/cavaliers'
+import EleveSelector from '../admin/EleveSelector'
 
 const EMPTY_EVENT = { title: '', type: 'stage', date_start: '', date_end: '', description: '', capacite_max: '', inscriptible: false }
 const EMPTY_INSCRIT = { parent_name: '', child_name: '', child_nom: '', email: '', phone: '' }
@@ -11,6 +12,7 @@ export default function EvenementsManager() {
   const [showForm, setShowForm] = useState(false)
   const [newEvent, setNewEvent] = useState(EMPTY_EVENT)
   const [message, setMessage] = useState(null)
+  const [cavaliers, setCavaliers] = useState([])
 
   // Inscriptions aux stages
   const [ouvertInscriptions, setOuvertInscriptions] = useState(null)
@@ -18,11 +20,16 @@ export default function EvenementsManager() {
   const [ajoutOuvert, setAjoutOuvert] = useState(false)
   const [nouvelInscrit, setNouvelInscrit] = useState(EMPTY_INSCRIT)
 
-  useEffect(() => { fetchEvents() }, [])
+  useEffect(() => { fetchEvents(); fetchCavaliers() }, [])
 
   async function fetchEvents() {
     const { data } = await supabase.from('events').select('*').order('date_start')
     setEvents(data || [])
+  }
+
+  async function fetchCavaliers() {
+    const { data } = await supabase.from('cavaliers').select('*').eq('actif', true).order('nom')
+    setCavaliers(data || [])
   }
 
   async function fetchInscriptions(eventId) {
@@ -42,13 +49,13 @@ export default function EvenementsManager() {
   }
 
   async function ajouterInscrit(eventId) {
-    if (!nouvelInscrit.child_name) {
-      setMessage({ type: 'error', text: "Le prénom de l'élève est obligatoire." })
+    if (!nouvelInscrit.child_name || !nouvelInscrit.child_nom) {
+      setMessage({ type: 'error', text: "Le prénom et le nom de l'élève sont obligatoires." })
       return
     }
-    const { error } = await supabase.from('event_inscriptions').insert({ ...nouvelInscrit, event_id: eventId })
+    const cavalierId = await upsertCavalierDepuisReservation(nouvelInscrit)
+    const { error } = await supabase.from('event_inscriptions').insert({ ...nouvelInscrit, event_id: eventId, cavalier_id: cavalierId })
     if (!error) {
-      await upsertCavalierDepuisReservation(nouvelInscrit)
       setNouvelInscrit(EMPTY_INSCRIT)
       setAjoutOuvert(false)
       fetchInscriptions(eventId)
@@ -226,11 +233,7 @@ export default function EvenementsManager() {
                 {ajoutOuvert ? (
                   <div style={{ background: COLORS.skyLight, borderRadius: '8px', padding: '0.8rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.4rem', marginBottom: '0.5rem' }}>
-                      <input placeholder="Prénom élève *" value={nouvelInscrit.child_name} onChange={e => setNouvelInscrit({ ...nouvelInscrit, child_name: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                      <input placeholder="Nom élève" value={nouvelInscrit.child_nom} onChange={e => setNouvelInscrit({ ...nouvelInscrit, child_nom: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                      <input placeholder="Nom prénom parent" value={nouvelInscrit.parent_name} onChange={e => setNouvelInscrit({ ...nouvelInscrit, parent_name: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                      <input placeholder="Email" value={nouvelInscrit.email} onChange={e => setNouvelInscrit({ ...nouvelInscrit, email: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
-                      <input placeholder="Tél." value={nouvelInscrit.phone} onChange={e => setNouvelInscrit({ ...nouvelInscrit, phone: e.target.value })} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+                      <EleveSelector cavaliers={cavaliers} value={nouvelInscrit} onChange={setNouvelInscrit} />
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => ajouterInscrit(event.id)} style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Confirmer</button>

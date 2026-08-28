@@ -37,11 +37,21 @@ export default function CavaliersManager() {
       .select('*, seances(date, creneaux_fixes(niveaux, heure_debut))')
       .eq('cavalier_id', cavalier.id)
 
-    const { data: bookingsLibre } = await supabase
-      .from('bookings')
-      .select('*, slots(title, date, time_start)')
-      .eq('child_name', cavalier.prenom)
-      .eq('child_nom', cavalier.nom)
+    // Réservations sur créneaux libres : d'abord par cavalier_id (lien fiable,
+    // mis en place pour toutes les nouvelles réservations), avec un
+    // rattrapage par nom exact pour les anciennes réservations migrées qui
+    // n'ont pas ce lien.
+    const [{ data: bookingsParId }, { data: bookingsParNom }] = await Promise.all([
+      supabase.from('bookings').select('*, slots(title, date, time_start)').eq('cavalier_id', cavalier.id),
+      supabase.from('bookings').select('*, slots(title, date, time_start)').is('cavalier_id', null).eq('child_name', cavalier.prenom).eq('child_nom', cavalier.nom)
+    ])
+    const bookingsLibre = [...(bookingsParId || []), ...(bookingsParNom || [])]
+
+    const [{ data: stagesParId }, { data: stagesParNom }] = await Promise.all([
+      supabase.from('event_inscriptions').select('*, events(title, date_start, type)').eq('cavalier_id', cavalier.id),
+      supabase.from('event_inscriptions').select('*, events(title, date_start, type)').is('cavalier_id', null).eq('child_name', cavalier.prenom).eq('child_nom', cavalier.nom)
+    ])
+    const stages = [...(stagesParId || []), ...(stagesParNom || [])]
 
     const lecons = [
       ...(presencesFixe || []).map(p => ({
@@ -52,13 +62,21 @@ export default function CavaliersManager() {
         present: p.present,
         kind: 'fixe'
       })),
-      ...(bookingsLibre || []).map(b => ({
+      ...bookingsLibre.map(b => ({
         id: `b-${b.id}`,
         date: b.slots?.date,
         label: b.slots?.title || 'Créneau libre',
         heure: b.slots?.time_start?.slice(0, 5),
         present: b.present,
         kind: 'libre'
+      })),
+      ...stages.map(s => ({
+        id: `s-${s.id}`,
+        date: s.events?.date_start,
+        label: s.events?.title || (s.events?.type === 'stage' ? 'Stage' : 'Événement'),
+        heure: null,
+        present: null,
+        kind: 'stage'
       }))
     ]
       .filter(l => l.date)
@@ -260,7 +278,7 @@ export default function CavaliersManager() {
                               <span style={{ color: COLORS.navy, fontWeight: 'bold' }}>{new Date(l.date + 'T12:00:00').toLocaleDateString('fr-FR')}</span>
                               <span style={{ color: '#888' }}>{l.heure}</span>
                               <span style={{ color: '#555' }}>{l.label}</span>
-                              <span style={{ color: '#aaa' }}>{l.kind === 'fixe' ? '🔒 fixe' : '🌐 libre'}</span>
+                              <span style={{ color: '#aaa' }}>{l.kind === 'fixe' ? '🔒 fixe' : l.kind === 'stage' ? '🏕️ stage' : '🌐 libre'}</span>
                               {l.present === true && <span style={{ color: COLORS.green, fontWeight: 'bold' }}>✓ présent</span>}
                               {l.present === false && <span style={{ color: COLORS.red, fontWeight: 'bold' }}>✕ absent</span>}
                               {l.present === null && <span style={{ color: '#ccc' }}>—</span>}
