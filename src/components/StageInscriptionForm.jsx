@@ -41,14 +41,15 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
       return
     }
 
+    const cavalierId = await upsertCavalierDepuisReservation(form)
+
     const { error: insertError } = await supabase
       .from('event_inscriptions')
-      .insert({ ...form, event_id: stage.id })
+      .insert({ ...form, event_id: stage.id, cavalier_id: cavalierId })
 
     if (insertError) {
       setError('Une erreur est survenue. Veuillez réessayer.')
     } else {
-      await upsertCavalierDepuisReservation(form)
       onSuccess()
     }
     setLoading(false)

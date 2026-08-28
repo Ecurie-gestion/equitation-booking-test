@@ -42,14 +42,15 @@ export default function BookingForm({ slot, onSuccess, onCancel }) {
       return
     }
 
+    const cavalierId = await upsertCavalierDepuisReservation(form)
+
     const { error: insertError } = await supabase
       .from('bookings')
-      .insert({ ...form, slot_id: slot.id })
+      .insert({ ...form, slot_id: slot.id, cavalier_id: cavalierId })
 
     if (insertError) {
       setError('Une erreur est survenue. Veuillez réessayer.')
     } else {
-      await upsertCavalierDepuisReservation(form)
       onSuccess()
     }
     setLoading(false)
