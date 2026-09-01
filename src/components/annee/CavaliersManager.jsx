@@ -1,6 +1,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS, NIVEAUX, TYPES_ABONNEMENT, JOURS_SEMAINE } from '../../lib/theme'
+import { toLocalISODate } from '../../lib/dates'
 
 const EMPTY = { prenom: '', nom: '', parent_nom: '', email: '', telephone: '', niveau: '' }
 
@@ -16,7 +17,19 @@ export default function CavaliersManager() {
   const [historiqueOuvert, setHistoriqueOuvert] = useState(null)
   const [historique, setHistorique] = useState({})
 
+  // Déplacement d'un abonnement vers un autre créneau fixe
+  const [creneauxFixes, setCreneauxFixes] = useState([])
+  const [movingAboId, setMovingAboId] = useState(null)
+  const [moveTargetCreneauId, setMoveTargetCreneauId] = useState('')
+
   useEffect(() => { fetchCavaliers() }, [showInactifs])
+  useEffect(() => { fetchCreneauxFixes() }, [])
+
+  async function fetchCreneauxFixes() {
+    const { data } = await supabase.from('creneaux_fixes').select('*').eq('actif', true)
+      .order('jour_semaine').order('heure_debut')
+    setCreneauxFixes(data || [])
+  }
 
   async function fetchCavaliers() {
     let query = supabase.from('cavaliers').select('*').order('nom')
@@ -92,6 +105,38 @@ export default function CavaliersManager() {
       setHistoriqueOuvert(cavalier.id)
       fetchHistorique(cavalier)
     }
+  }
+
+  // Change le créneau fixe d'un abonnement pour toute sa durée (garde le
+  // type, les dates et le solde de leçons — seul le créneau change). Nettoie
+  // aussi les présences déjà générées pour les prochaines séances de
+  // l'ancien créneau, pour que le cavalier n'y apparaisse plus.
+  async function deplacerAbonnement(cavalier, abonnement) {
+    if (!moveTargetCreneauId) {
+      setMessage({ type: 'error', text: 'Choisis le nouveau créneau.' })
+      return
+    }
+    const { error } = await supabase.from('abonnements').update({ creneau_fixe_id: moveTargetCreneauId }).eq('id', abonnement.id)
+    if (error) {
+      setMessage({ type: 'error', text: 'Erreur lors du déplacement.' })
+      return
+    }
+
+    const today = toLocalISODate(new Date())
+    const { data: seancesFutures } = await supabase
+      .from('seances')
+      .select('id')
+      .eq('creneau_fixe_id', abonnement.creneau_fixe_id)
+      .gte('date', today)
+    const idsSeancesFutures = (seancesFutures || []).map(s => s.id)
+    if (idsSeancesFutures.length > 0) {
+      await supabase.from('presences').delete().eq('cavalier_id', cavalier.id).in('seance_id', idsSeancesFutures)
+    }
+
+    setMessage({ type: 'success', text: `${cavalier.prenom} déplacé(e) vers le nouveau créneau pour toute la durée de son abonnement.` })
+    setMovingAboId(null)
+    setMoveTargetCreneauId('')
+    fetchHistorique(cavalier)
   }
 
   function startAdd() {
@@ -251,20 +296,54 @@ export default function CavaliersManager() {
                       {hist && hist.abonnements.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '1rem' }}>
                           {hist.abonnements.map(a => (
-                            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'white', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.82rem', opacity: a.actif ? 1 : 0.6 }}>
-                              <strong style={{ color: COLORS.navy }}>{TYPES_ABONNEMENT.find(t => t.value === a.type)?.label || a.type}</strong>
-                              {a.creneaux_fixes && (
+                            <Fragment key={a.id}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'white', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.82rem', opacity: a.actif ? 1 : 0.6 }}>
+                                <strong style={{ color: COLORS.navy }}>{TYPES_ABONNEMENT.find(t => t.value === a.type)?.label || a.type}</strong>
+                                {a.creneaux_fixes && (
+                                  <span style={{ color: '#888' }}>
+                                    {JOURS_SEMAINE[a.creneaux_fixes.jour_semaine]} {a.creneaux_fixes.heure_debut?.slice(0, 5)} · {a.creneaux_fixes.niveaux}
+                                  </span>
+                                )}
                                 <span style={{ color: '#888' }}>
-                                  {JOURS_SEMAINE[a.creneaux_fixes.jour_semaine]} {a.creneaux_fixes.heure_debut?.slice(0, 5)} · {a.creneaux_fixes.niveaux}
+                                  {a.type === 'dix_lecons' && `${a.lecons_restantes}/${a.lecons_totales} restantes`}
+                                  {a.type === 'vacances_a_vacances' && `du ${new Date(a.date_debut).toLocaleDateString('fr-FR')}${a.date_fin ? ` au ${new Date(a.date_fin).toLocaleDateString('fr-FR')}` : ''}`}
+                                  {a.type === 'unite' && `le ${new Date(a.date_debut).toLocaleDateString('fr-FR')}`}
                                 </span>
+                                {!a.actif && <span style={{ color: '#aaa', fontStyle: 'italic' }}>(terminé)</span>}
+                                {a.actif && a.creneau_fixe_id && (
+                                  <button onClick={() => { setMovingAboId(movingAboId === a.id ? null : a.id); setMoveTargetCreneauId('') }}
+                                    title="Déplacer vers un autre créneau (pour toute la durée de l'abonnement)"
+                                    style={{ marginLeft: 'auto', background: 'none', border: `1px solid ${COLORS.sky}`, color: COLORS.sky, padding: '0.2rem 0.5rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>↔️ Déplacer</button>
+                                )}
+                              </div>
+                              {movingAboId === a.id && (
+                                <div style={{ background: COLORS.skyLight, borderRadius: '6px', padding: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '0.82rem', color: COLORS.navy }}>Nouveau créneau :</span>
+                                    <select value={moveTargetCreneauId} onChange={e => setMoveTargetCreneauId(e.target.value)}
+                                      style={{ padding: '0.35rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.82rem' }}>
+                                      <option value="">Choisir un créneau...</option>
+                                      {creneauxFixes.filter(cf => cf.id !== a.creneau_fixe_id).map(cf => (
+                                        <option key={cf.id} value={cf.id}>
+                                          {JOURS_SEMAINE[cf.jour_semaine]} {cf.heure_debut.slice(0, 5)}–{cf.heure_fin.slice(0, 5)}{cf.niveaux ? ` (${cf.niveaux})` : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button onClick={() => deplacerAbonnement(c, a)}
+                                      style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.35rem 0.7rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
+                                      Confirmer
+                                    </button>
+                                    <button onClick={() => { setMovingAboId(null); setMoveTargetCreneauId('') }}
+                                      style={{ background: '#ccc', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem' }}>
+                                      Annuler
+                                    </button>
+                                  </div>
+                                  <p style={{ margin: 0, color: '#666', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                                    {c.prenom} gardera son type d'abonnement et son solde de leçons — seul le créneau change, pour toute la durée restante.
+                                  </p>
+                                </div>
                               )}
-                              <span style={{ color: '#888' }}>
-                                {a.type === 'dix_lecons' && `${a.lecons_restantes}/${a.lecons_totales} restantes`}
-                                {a.type === 'vacances_a_vacances' && `du ${new Date(a.date_debut).toLocaleDateString('fr-FR')}${a.date_fin ? ` au ${new Date(a.date_fin).toLocaleDateString('fr-FR')}` : ''}`}
-                                {a.type === 'unite' && `le ${new Date(a.date_debut).toLocaleDateString('fr-FR')}`}
-                              </span>
-                              {!a.actif && <span style={{ color: '#aaa', fontStyle: 'italic' }}>(terminé)</span>}
-                            </div>
+                            </Fragment>
                           ))}
                         </div>
                       )}
