@@ -32,7 +32,7 @@ export default function CavaliersManager() {
   }
 
   async function fetchCavaliers() {
-    let query = supabase.from('cavaliers').select('*').order('nom')
+    let query = supabase.from('cavaliers').select('*').order('prenom')
     if (!showInactifs) query = query.eq('actif', true)
     const { data } = await query
     setCavaliers(data || [])
