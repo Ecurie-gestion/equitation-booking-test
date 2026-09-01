@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { supabase } from '../../lib/supabase'
 import { sendEmailsToAll } from '../../lib/email'
 import { COLORS, JOURS_SEMAINE, TYPES_ABONNEMENT, COURS_TYPES } from '../../lib/theme'
@@ -55,6 +55,8 @@ export default function CreneauxManager() {
   const [openItem, setOpenItem] = useState(null) // `fixe-<id>` ou `libre-<id>`
   const [showAboForm, setShowAboForm] = useState(null)
   const [aboForm, setAboForm] = useState(EMPTY_ABO)
+  const [movingAboId, setMovingAboId] = useState(null)
+  const [moveTargetCreneauId, setMoveTargetCreneauId] = useState('')
   const [addingEleve, setAddingEleve] = useState(null)
   const [newEleve, setNewEleve] = useState(EMPTY_ELEVE)
 
@@ -293,6 +295,26 @@ export default function CreneauxManager() {
     if (!confirm('Désinscrire ce cavalier de ce créneau ?')) return
     await supabase.from('abonnements').update({ actif: false }).eq('id', aboId)
     fetchAbonnements(creneauId)
+  }
+
+  // Change le créneau fixe d'un abonnement pour toute sa durée (garde le type,
+  // les dates et le solde de leçons — seul le créneau change).
+  async function deplacerAbonnement(aboId, ancienCreneauId) {
+    if (!moveTargetCreneauId) {
+      setMessage({ type: 'error', text: 'Choisis le nouveau créneau.' })
+      return
+    }
+    const { error } = await supabase.from('abonnements').update({ creneau_fixe_id: moveTargetCreneauId }).eq('id', aboId)
+    if (!error) {
+      setMessage({ type: 'success', text: 'Cavalier déplacé vers le nouveau créneau pour toute la durée de son abonnement.' })
+      const nouveauCreneauId = moveTargetCreneauId
+      setMovingAboId(null)
+      setMoveTargetCreneauId('')
+      fetchAbonnements(ancienCreneauId)
+      fetchAbonnements(nouveauCreneauId)
+    } else {
+      setMessage({ type: 'error', text: 'Erreur lors du déplacement.' })
+    }
   }
 
   // --- Créneaux libres : édition / suppression / réservations ---
@@ -551,18 +573,54 @@ export default function CreneauxManager() {
                         </thead>
                         <tbody>
                           {(abonnements[cr.id] || []).map(a => (
-                            <tr key={a.id} style={{ borderBottom: '1px solid #eee' }}>
-                              <td style={{ padding: '0.4rem' }}>{a.cavaliers?.prenom} {a.cavaliers?.nom}</td>
-                              <td style={{ padding: '0.4rem' }}>{TYPES_ABONNEMENT.find(t => t.value === a.type)?.label}</td>
-                              <td style={{ padding: '0.4rem' }}>
-                                {a.type === 'dix_lecons' && `${a.lecons_restantes}/${a.lecons_totales} restantes`}
-                                {a.type === 'vacances_a_vacances' && `Du ${new Date(a.date_debut).toLocaleDateString('fr-FR')}${a.date_fin ? ` au ${new Date(a.date_fin).toLocaleDateString('fr-FR')}` : ''}`}
-                                {a.type === 'unite' && `Le ${new Date(a.date_debut).toLocaleDateString('fr-FR')}`}
-                              </td>
-                              <td style={{ padding: '0.4rem', textAlign: 'center' }}>
-                                <button onClick={() => desinscrire(a.id, cr.id)} style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.25rem 0.5rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑️</button>
-                              </td>
-                            </tr>
+                            <Fragment key={a.id}>
+                              <tr style={{ borderBottom: '1px solid #eee' }}>
+                                <td style={{ padding: '0.4rem' }}>{a.cavaliers?.prenom} {a.cavaliers?.nom}</td>
+                                <td style={{ padding: '0.4rem' }}>{TYPES_ABONNEMENT.find(t => t.value === a.type)?.label}</td>
+                                <td style={{ padding: '0.4rem' }}>
+                                  {a.type === 'dix_lecons' && `${a.lecons_restantes}/${a.lecons_totales} restantes`}
+                                  {a.type === 'vacances_a_vacances' && `Du ${new Date(a.date_debut).toLocaleDateString('fr-FR')}${a.date_fin ? ` au ${new Date(a.date_fin).toLocaleDateString('fr-FR')}` : ''}`}
+                                  {a.type === 'unite' && `Le ${new Date(a.date_debut).toLocaleDateString('fr-FR')}`}
+                                </td>
+                                <td style={{ padding: '0.4rem', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                  <button onClick={() => { setMovingAboId(movingAboId === a.id ? null : a.id); setMoveTargetCreneauId('') }}
+                                    title="Déplacer vers un autre créneau (pour toute la durée de l'abonnement)"
+                                    style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '0.25rem 0.5rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem', marginRight: '0.3rem' }}>↔️</button>
+                                  <button onClick={() => desinscrire(a.id, cr.id)} style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.25rem 0.5rem', borderRadius: '5px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑️</button>
+                                </td>
+                              </tr>
+                              {movingAboId === a.id && (
+                                <tr>
+                                  <td colSpan={4} style={{ padding: '0.6rem', background: COLORS.skyLight }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: '0.85rem', color: COLORS.navy }}>
+                                        Déplacer {a.cavaliers?.prenom} vers :
+                                      </span>
+                                      <select value={moveTargetCreneauId} onChange={e => setMoveTargetCreneauId(e.target.value)}
+                                        style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.85rem' }}>
+                                        <option value="">Choisir un créneau...</option>
+                                        {creneauxFixes.filter(c2 => c2.id !== cr.id).map(c2 => (
+                                          <option key={c2.id} value={c2.id}>
+                                            {JOURS_SEMAINE[c2.jour_semaine]} {c2.heure_debut.slice(0, 5)}–{c2.heure_fin.slice(0, 5)}{c2.niveaux ? ` (${c2.niveaux})` : ''}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button onClick={() => deplacerAbonnement(a.id, cr.id)}
+                                        style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                        Confirmer le déplacement
+                                      </button>
+                                      <button onClick={() => { setMovingAboId(null); setMoveTargetCreneauId('') }}
+                                        style={{ background: '#ccc', border: 'none', padding: '0.4rem 0.7rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                        Annuler
+                                      </button>
+                                    </div>
+                                    <p style={{ margin: '0.4rem 0 0', color: '#666', fontSize: '0.78rem', fontStyle: 'italic' }}>
+                                      Le cavalier gardera son type d'abonnement et son solde de leçons — seul le créneau change, pour toute la durée restante.
+                                    </p>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
                           ))}
                         </tbody>
                       </table>
