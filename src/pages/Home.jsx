@@ -79,7 +79,7 @@ export default function Home() {
           </button>
           <button onClick={() => setShowDemain(true)}
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.8rem', padding: '0.4rem 0.8rem', borderRadius: '20px', whiteSpace: 'nowrap' }}>
-            🐴 Demain
+            🐴 Aujourd'hui & demain
           </button>
         </nav>
       </header>
