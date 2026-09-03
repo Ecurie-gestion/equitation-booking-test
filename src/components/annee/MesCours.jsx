@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS } from '../../lib/theme'
 import { toLocalISODate } from '../../lib/dates'
+import { chevalDejaAssigne } from '../../lib/chevaux'
 
 // Un cavalier est-il attendu à cette séance fixe, selon son type d'abonnement ?
 function estAttendu(abonnement, dateSeance) {
@@ -66,7 +67,7 @@ export default function MesCours() {
     // Séances des cours fixes
     const { data: seancesData } = await supabase
       .from('seances')
-      .select('*, creneaux_fixes(heure_debut, niveaux)')
+      .select('*, creneaux_fixes(heure_debut, heure_fin, niveaux)')
       .gte('date', today)
       .lte('date', dateLimite)
       .eq('annulee', false)
@@ -94,6 +95,7 @@ export default function MesCours() {
         creneauFixeId: s.creneau_fixe_id,
         date: s.date,
         heure: s.creneaux_fixes?.heure_debut?.slice(0, 5) || '',
+        heureFin: s.creneaux_fixes?.heure_fin?.slice(0, 5) || '',
         label: s.creneaux_fixes?.niveaux || 'Cours fixe',
         riders: (presencesFinales || []).map(p => ({
           rowId: p.id,
@@ -121,6 +123,7 @@ export default function MesCours() {
         kind: 'libre',
         date: s.date,
         heure: s.time_start?.slice(0, 5) || '',
+        heureFin: s.time_end?.slice(0, 5) || '',
         label: s.title || 'Créneau libre',
         riders: (bookings || []).map(b => ({
           rowId: b.id,
@@ -186,6 +189,21 @@ export default function MesCours() {
 
   async function assignerCheval(item, rider, chevalId) {
     const table = item.kind === 'fixe' ? 'presences' : 'bookings'
+    if (chevalId) {
+      const conflit = await chevalDejaAssigne({
+        date: item.date,
+        heureDebut: item.heure,
+        heureFin: item.heureFin,
+        chevalId,
+        excluerTable: table,
+        excluerId: rider.rowId
+      })
+      if (conflit) {
+        const cheval = chevaux.find(ch => ch.id === chevalId)
+        setMessage({ type: 'error', text: `${cheval?.nom || 'Ce cheval'} est déjà assigné à ${conflit.nom} sur "${conflit.label}" à ${conflit.heure} le ${formatDate(item.date)}. Choisis un autre cheval.` })
+        return
+      }
+    }
     await supabase.from(table).update({ cheval_id: chevalId || null }).eq('id', rider.rowId)
     rafraichirUnCours(item)
   }

@@ -4,6 +4,7 @@ import { sendEmailsToAll } from '../../lib/email'
 import { COLORS, JOURS_SEMAINE, TYPES_ABONNEMENT, COURS_TYPES } from '../../lib/theme'
 import { upsertCavalierDepuisReservation } from '../../lib/cavaliers'
 import { toLocalISODate } from '../../lib/dates'
+import { chevalDejaAssigne } from '../../lib/chevaux'
 import EleveSelector from '../admin/EleveSelector'
 
 const EMPTY_FIXE = { jour_semaine: 1, heure_debut: '18:00', heure_fin: '19:00', niveaux: '', capacite_max: 8 }
@@ -377,6 +378,22 @@ export default function CreneauxManager() {
   }
 
   async function assignerChevalBooking(bookingId, chevalId, slotId) {
+    if (chevalId) {
+      const slot = creneauxLibres.find(s => s.id === slotId)
+      const conflit = slot && await chevalDejaAssigne({
+        date: slot.date,
+        heureDebut: slot.time_start?.slice(0, 5),
+        heureFin: slot.time_end?.slice(0, 5),
+        chevalId,
+        excluerTable: 'bookings',
+        excluerId: bookingId
+      })
+      if (conflit) {
+        const cheval = chevaux.find(ch => ch.id === chevalId)
+        setMessage({ type: 'error', text: `${cheval?.nom || 'Ce cheval'} est déjà assigné à ${conflit.nom} sur "${conflit.label}" à ${conflit.heure} le même jour. Choisis un autre cheval.` })
+        return
+      }
+    }
     await supabase.from('bookings').update({ cheval_id: chevalId || null }).eq('id', bookingId)
     fetchBookings(slotId)
   }
