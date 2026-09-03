@@ -208,9 +208,17 @@ export default function CreneauxManager() {
     if (!error && data) {
       let syncOk = false
       try {
+        // On envoie le jeton de la session admin en cours : la fonction
+        // serverless vérifie qu'il s'agit bien d'un admin connecté avant
+        // d'écrire dans Google Agenda (sinon n'importe qui pourrait
+        // déclencher des écritures juste en connaissant l'URL de la fonction).
+        const { data: { session } } = await supabase.auth.getSession()
         const res = await fetch('/.netlify/functions/update-calendar', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+          },
           body: JSON.stringify({ slot_id: data.id, action: 'create' })
         })
         syncOk = res.ok
