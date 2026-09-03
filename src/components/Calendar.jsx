@@ -219,7 +219,7 @@ export default function Calendar({ onSelectSlot }) {
                   <p style={{ margin: '0.2rem 0', fontSize: '0.85rem', fontWeight: 'bold', color: e.places_remaining > 0 ? '#2ecc71' : '#e74c3c' }}>
                     {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
                   </p>
-                  {e.places_remaining > 0 && (
+                  {e.places_remaining > 0 && selectedDateStr >= today && (
                     <button onClick={() => onSelectSlot({ ...e, kind: 'libre' })}
                       style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}>
                       M'inscrire
@@ -239,7 +239,7 @@ export default function Calendar({ onSelectSlot }) {
                       {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
                     </p>
                   )}
-                  {e.inscriptible && (e.places_remaining === null || e.places_remaining > 0) && (
+                  {e.inscriptible && (e.places_remaining === null || e.places_remaining > 0) && e.date_end >= today && (
                     <button onClick={() => onSelectSlot({ ...e, kind: 'evenement' })}
                       style={{ background: COLORS.stage, color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}>
                       M'inscrire
@@ -268,7 +268,7 @@ export default function Calendar({ onSelectSlot }) {
                       {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
                     </p>
                   )}
-                  {e.inscriptible && (e.places_remaining === null || e.places_remaining > 0) && (
+                  {e.inscriptible && (e.places_remaining === null || e.places_remaining > 0) && e.date_end >= today && (
                     <button onClick={() => onSelectSlot({ ...e, kind: 'evenement' })}
                       style={{ background: '#b7950b', color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}>
                       M'inscrire

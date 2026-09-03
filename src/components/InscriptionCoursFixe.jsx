@@ -133,6 +133,10 @@ export default function InscriptionCoursFixe({ onBack }) {
         return
       }
       const seance = seances.find(s => s.id === selectedSeanceId)
+      if (!seance || seance.date < toLocalISODate(new Date())) {
+        setMessage({ type: 'error', text: 'Cette date est déjà passée, choisis une date à venir.' })
+        return
+      }
       rows = [{ creneau_fixe_id: seance.creneau_fixe_id, type: 'unite', date_debut: seance.date }]
     }
 

@@ -33,9 +33,11 @@ export default function SlotList({ onSelectSlot }) {
   }, [])
 
   async function fetchSlots() {
+    const today = toLocalISODate(new Date())
     const { data, error } = await supabase
       .from('slots_with_availability')
       .select('*')
+      .gte('date', today)
       .order('date', { ascending: true })
     if (!error) setSlots(data)
     setLoading(false)

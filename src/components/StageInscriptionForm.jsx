@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { upsertCavalierDepuisReservation } from '../lib/cavaliers'
+import { toLocalISODate } from '../lib/dates'
 
 export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
   const [form, setForm] = useState({
@@ -15,6 +16,17 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    const { data: fraisEvent } = await supabase
+      .from('events')
+      .select('date_end')
+      .eq('id', stage.id)
+      .single()
+    if (fraisEvent && fraisEvent.date_end < toLocalISODate(new Date())) {
+      setError('Cet événement est déjà passé, il n\'est plus possible de s\'y inscrire.')
+      setLoading(false)
+      return
+    }
 
     if (stage.capacite_max) {
       const { count } = await supabase

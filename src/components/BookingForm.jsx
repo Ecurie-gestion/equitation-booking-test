@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { upsertCavalierDepuisReservation } from '../lib/cavaliers'
+import { toLocalISODate } from '../lib/dates'
 
 export default function BookingForm({ slot, onSuccess, onCancel }) {
   const [form, setForm] = useState({
@@ -19,12 +20,18 @@ export default function BookingForm({ slot, onSuccess, onCancel }) {
 
     const { data: check } = await supabase
       .from('slots_with_availability')
-      .select('places_remaining')
+      .select('places_remaining, date')
       .eq('id', slot.id)
       .single()
 
     if (!check || check.places_remaining <= 0) {
       setError('Désolé, ce créneau vient d\'être complet.')
+      setLoading(false)
+      return
+    }
+
+    if (check.date < toLocalISODate(new Date())) {
+      setError('Ce créneau est déjà passé, il n\'est plus possible de s\'y inscrire.')
       setLoading(false)
       return
     }
