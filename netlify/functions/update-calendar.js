@@ -33,13 +33,27 @@ async function getValidToken(supabase) {
 }
 
 exports.handler = async (event) => {
-  console.log('UPDATE-CALENDAR APPELE avec:', event.body)
-  const { slot_id, action } = JSON.parse(event.body)
-
   const supabase = createClient(
     process.env.VITE_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_KEY
   )
+
+  // Sécurité : seule une session admin valide (connectée via /admin) peut
+  // déclencher cette fonction — sinon n'importe qui connaissant son URL
+  // pourrait écrire dans le Google Agenda de l'écurie et épuiser le quota
+  // de l'API Google.
+  const authHeader = event.headers.authorization || event.headers.Authorization || ''
+  const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!accessToken) {
+    return { statusCode: 401, body: 'Non autorisé' }
+  }
+  const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken)
+  if (authError || !user) {
+    return { statusCode: 401, body: 'Non autorisé' }
+  }
+
+  console.log('UPDATE-CALENDAR APPELE avec:', event.body)
+  const { slot_id, action } = JSON.parse(event.body)
 
   const token = await getValidToken(supabase)
   if (!token) return { statusCode: 401, body: 'Non connecté à Google' }
