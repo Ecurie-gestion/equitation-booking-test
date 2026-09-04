@@ -59,7 +59,11 @@ export default function MesCours() {
 
   async function fetchTout() {
     setLoading(true)
-    const today = toLocalISODate(new Date())
+    // On garde aussi les 3 derniers jours pour pouvoir rattraper le pointage
+    // des présences le lendemain ou le surlendemain d'un cours.
+    const ilYATroisJours = new Date()
+    ilYATroisJours.setDate(ilYATroisJours.getDate() - 3)
+    const dateDebut = toLocalISODate(ilYATroisJours)
     const dansDeuxSemaines = new Date()
     dansDeuxSemaines.setDate(dansDeuxSemaines.getDate() + 14)
     const dateLimite = toLocalISODate(dansDeuxSemaines)
@@ -68,7 +72,7 @@ export default function MesCours() {
     const { data: seancesData } = await supabase
       .from('seances')
       .select('*, creneaux_fixes(heure_debut, heure_fin, niveaux)')
-      .gte('date', today)
+      .gte('date', dateDebut)
       .lte('date', dateLimite)
       .eq('annulee', false)
       .order('date')
@@ -111,7 +115,7 @@ export default function MesCours() {
     const { data: libresData } = await supabase
       .from('slots')
       .select('*')
-      .gte('date', today)
+      .gte('date', dateDebut)
       .lte('date', dateLimite)
       .order('date')
 
@@ -238,16 +242,22 @@ export default function MesCours() {
     const auj = toLocalISODate(new Date())
     const demain = new Date(); demain.setDate(demain.getDate() + 1)
     const demainStr = toLocalISODate(demain)
+    const hier = new Date(); hier.setDate(hier.getDate() - 1)
+    const hierStr = toLocalISODate(hier)
+    const avantHier = new Date(); avantHier.setDate(avantHier.getDate() - 2)
+    const avantHierStr = toLocalISODate(avantHier)
     if (dateStr === auj) return "Aujourd'hui"
     if (dateStr === demainStr) return 'Demain'
+    if (dateStr === hierStr) return 'Hier'
+    if (dateStr === avantHierStr) return 'Avant-hier'
     return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   }
 
   return (
     <div>
-      <h3 style={{ color: COLORS.navy, fontSize: '1.1rem', marginBottom: '0.3rem' }}>📅 Mes cours (14 prochains jours)</h3>
+      <h3 style={{ color: COLORS.navy, fontSize: '1.1rem', marginBottom: '0.3rem' }}>📅 Mes cours (3 derniers jours et 14 prochains jours)</h3>
       <p style={{ color: '#888', fontSize: '0.85rem', marginTop: 0, marginBottom: '1.2rem' }}>
-        Clique sur un cours pour voir qui vient, pointer les présences et choisir les chevaux.
+        Clique sur un cours pour voir qui vient, pointer les présences et choisir les chevaux. Les cours des 3 derniers jours restent là pour rattraper le pointage.
       </p>
 
       {message && (
@@ -279,16 +289,21 @@ export default function MesCours() {
 
       {!loading && cours.length === 0 && (
         <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <p style={{ color: '#888', margin: 0 }}>Aucun cours prévu dans les 14 prochains jours.</p>
+          <p style={{ color: '#888', margin: 0 }}>Aucun cours sur cette période.</p>
         </div>
       )}
 
-      {cours.map(item => (
+      {cours.map(item => {
+        const estPasse = item.date < toLocalISODate(new Date())
+        const aPointer = estPasse && item.riders.some(r => r.present === null)
+        return (
         <div key={item.id} style={{ background: 'white', borderRadius: '14px', marginBottom: '0.8rem', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', overflow: 'hidden', border: `2px solid ${ouvert === item.id ? COLORS.sky : 'transparent'}` }}>
           <div onClick={() => setOuvert(ouvert === item.id ? null : item.id)}
             style={{ padding: '1rem 1.1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <div style={{ color: '#888', fontSize: '0.8rem', textTransform: 'capitalize', marginBottom: '0.15rem' }}>{formatDate(item.date)}</div>
+              <div style={{ color: aPointer ? '#d9822b' : '#888', fontWeight: aPointer ? 'bold' : 'normal', fontSize: '0.8rem', textTransform: 'capitalize', marginBottom: '0.15rem' }}>
+                {aPointer ? `⏳ ${formatDate(item.date)} — à pointer` : formatDate(item.date)}
+              </div>
               <strong style={{ color: COLORS.navy, fontSize: '1.05rem' }}>{item.heure}</strong>
               <span style={{ color: '#666', marginLeft: '0.6rem' }}>{item.label}</span>
             </div>
@@ -350,7 +365,8 @@ export default function MesCours() {
             </div>
           )}
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
