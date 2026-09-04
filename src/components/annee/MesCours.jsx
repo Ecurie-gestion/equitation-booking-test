@@ -253,11 +253,86 @@ export default function MesCours() {
     return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   }
 
+  const aujourdhui = toLocalISODate(new Date())
+  const coursARattraper = cours.filter(item => item.date < aujourdhui && item.riders.some(r => r.present === null))
+  const coursAVenir = cours.filter(item => item.date >= aujourdhui)
+
+  function CoursCard({ item }) {
+    return (
+      <div style={{ background: 'white', borderRadius: '14px', marginBottom: '0.8rem', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', overflow: 'hidden', border: `2px solid ${ouvert === item.id ? COLORS.sky : 'transparent'}` }}>
+        <div onClick={() => setOuvert(ouvert === item.id ? null : item.id)}
+          style={{ padding: '1rem 1.1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div>
+            <div style={{ color: '#888', fontSize: '0.8rem', textTransform: 'capitalize', marginBottom: '0.15rem' }}>{formatDate(item.date)}</div>
+            <strong style={{ color: COLORS.navy, fontSize: '1.05rem' }}>{item.heure}</strong>
+            <span style={{ color: '#666', marginLeft: '0.6rem' }}>{item.label}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ color: '#888', fontSize: '0.85rem' }}>{item.riders.length} élève{item.riders.length > 1 ? 's' : ''}</span>
+            <span style={{ color: COLORS.sky, fontSize: '1.2rem' }}>{ouvert === item.id ? '▲' : '▼'}</span>
+          </div>
+        </div>
+
+        {ouvert === item.id && (
+          <div style={{ borderTop: `2px solid ${COLORS.skyLight}`, padding: '1rem 1.1rem' }}>
+            {item.riders.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>Personne d'inscrit pour ce cours.</p>}
+
+            {item.riders.map(rider => (
+              <div key={rider.rowId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', padding: '0.7rem 0', borderBottom: '1px solid #eee' }}>
+                <span style={{ fontWeight: 'bold', color: COLORS.navy, fontSize: '1rem' }}>{rider.nom}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <select value={rider.cheval_id || ''} onChange={e => assignerCheval(item, rider, e.target.value)}
+                    style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}>
+                    <option value="">🐴 Cheval...</option>
+                    {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}</option>)}
+                  </select>
+                  <button onClick={() => marquerPresence(item, rider, true)}
+                    style={{ background: rider.present === true ? COLORS.green : '#eee', color: rider.present === true ? 'white' : '#666', border: 'none', padding: '0.5rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                    ✓ Présent
+                  </button>
+                  <button onClick={() => marquerPresence(item, rider, false)}
+                    style={{ background: rider.present === false ? COLORS.red : '#eee', color: rider.present === false ? 'white' : '#666', border: 'none', padding: '0.5rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                    ✕ Absent
+                  </button>
+                  <button onClick={() => retirer(item, rider)} title="Retirer"
+                    style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>🗑️</button>
+                </div>
+              </div>
+            ))}
+
+            {ajoutOuvert === item.id ? (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.8rem', flexWrap: 'wrap' }}>
+                <select value={ajoutId} onChange={e => setAjoutId(e.target.value)}
+                  style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}>
+                  <option value="">Choisir un élève...</option>
+                  {cavaliers.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
+                </select>
+                <button onClick={() => ajouterRemplacant(item)}
+                  style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                  Ajouter
+                </button>
+                <button onClick={() => { setAjoutOuvert(null); setAjoutId('') }}
+                  style={{ background: '#eee', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                  Annuler
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setAjoutOuvert(item.id)}
+                style={{ background: 'none', border: `1px dashed ${COLORS.sky}`, color: COLORS.sky, padding: '0.5rem 0.9rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.8rem' }}>
+                ➕ Ajouter un élève à ce cours
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
-      <h3 style={{ color: COLORS.navy, fontSize: '1.1rem', marginBottom: '0.3rem' }}>📅 Mes cours (3 derniers jours et 14 prochains jours)</h3>
+      <h3 style={{ color: COLORS.navy, fontSize: '1.1rem', marginBottom: '0.3rem' }}>📅 Mes cours (14 prochains jours)</h3>
       <p style={{ color: '#888', fontSize: '0.85rem', marginTop: 0, marginBottom: '1.2rem' }}>
-        Clique sur un cours pour voir qui vient, pointer les présences et choisir les chevaux. Les cours des 3 derniers jours restent là pour rattraper le pointage.
+        Clique sur un cours pour voir qui vient, pointer les présences et choisir les chevaux.
       </p>
 
       {message && (
@@ -287,86 +362,23 @@ export default function MesCours() {
 
       {loading && <p style={{ color: '#888' }}>Chargement...</p>}
 
-      {!loading && cours.length === 0 && (
-        <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <p style={{ color: '#888', margin: 0 }}>Aucun cours sur cette période.</p>
+      {coursARattraper.length > 0 && (
+        <div style={{ background: '#fff8ec', border: '1px solid #f5deb3', borderRadius: '14px', padding: '1rem 1.1rem', marginBottom: '1.5rem' }}>
+          <h4 style={{ color: '#a86a1a', fontSize: '0.95rem', margin: '0 0 0.2rem 0' }}>⏳ Présences à rattraper ({coursARattraper.length})</h4>
+          <p style={{ color: '#a86a1a', fontSize: '0.82rem', margin: '0 0 0.8rem 0' }}>
+            Cours des 3 derniers jours pas encore pointés.
+          </p>
+          {coursARattraper.map(item => <CoursCard key={item.id} item={item} />)}
         </div>
       )}
 
-      {cours.map(item => {
-        const estPasse = item.date < toLocalISODate(new Date())
-        const aPointer = estPasse && item.riders.some(r => r.present === null)
-        return (
-        <div key={item.id} style={{ background: 'white', borderRadius: '14px', marginBottom: '0.8rem', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', overflow: 'hidden', border: `2px solid ${ouvert === item.id ? COLORS.sky : 'transparent'}` }}>
-          <div onClick={() => setOuvert(ouvert === item.id ? null : item.id)}
-            style={{ padding: '1rem 1.1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div>
-              <div style={{ color: aPointer ? '#d9822b' : '#888', fontWeight: aPointer ? 'bold' : 'normal', fontSize: '0.8rem', textTransform: 'capitalize', marginBottom: '0.15rem' }}>
-                {aPointer ? `⏳ ${formatDate(item.date)} — à pointer` : formatDate(item.date)}
-              </div>
-              <strong style={{ color: COLORS.navy, fontSize: '1.05rem' }}>{item.heure}</strong>
-              <span style={{ color: '#666', marginLeft: '0.6rem' }}>{item.label}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ color: '#888', fontSize: '0.85rem' }}>{item.riders.length} élève{item.riders.length > 1 ? 's' : ''}</span>
-              <span style={{ color: COLORS.sky, fontSize: '1.2rem' }}>{ouvert === item.id ? '▲' : '▼'}</span>
-            </div>
-          </div>
-
-          {ouvert === item.id && (
-            <div style={{ borderTop: `2px solid ${COLORS.skyLight}`, padding: '1rem 1.1rem' }}>
-              {item.riders.length === 0 && <p style={{ color: '#888', fontSize: '0.9rem' }}>Personne d'inscrit pour ce cours.</p>}
-
-              {item.riders.map(rider => (
-                <div key={rider.rowId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', padding: '0.7rem 0', borderBottom: '1px solid #eee' }}>
-                  <span style={{ fontWeight: 'bold', color: COLORS.navy, fontSize: '1rem' }}>{rider.nom}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <select value={rider.cheval_id || ''} onChange={e => assignerCheval(item, rider, e.target.value)}
-                      style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}>
-                      <option value="">🐴 Cheval...</option>
-                      {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}</option>)}
-                    </select>
-                    <button onClick={() => marquerPresence(item, rider, true)}
-                      style={{ background: rider.present === true ? COLORS.green : '#eee', color: rider.present === true ? 'white' : '#666', border: 'none', padding: '0.5rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                      ✓ Présent
-                    </button>
-                    <button onClick={() => marquerPresence(item, rider, false)}
-                      style={{ background: rider.present === false ? COLORS.red : '#eee', color: rider.present === false ? 'white' : '#666', border: 'none', padding: '0.5rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                      ✕ Absent
-                    </button>
-                    <button onClick={() => retirer(item, rider)} title="Retirer"
-                      style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>🗑️</button>
-                  </div>
-                </div>
-              ))}
-
-              {ajoutOuvert === item.id ? (
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.8rem', flexWrap: 'wrap' }}>
-                  <select value={ajoutId} onChange={e => setAjoutId(e.target.value)}
-                    style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}>
-                    <option value="">Choisir un élève...</option>
-                    {cavaliers.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
-                  </select>
-                  <button onClick={() => ajouterRemplacant(item)}
-                    style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                    Ajouter
-                  </button>
-                  <button onClick={() => { setAjoutOuvert(null); setAjoutId('') }}
-                    style={{ background: '#eee', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                    Annuler
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setAjoutOuvert(item.id)}
-                  style={{ background: 'none', border: `1px dashed ${COLORS.sky}`, color: COLORS.sky, padding: '0.5rem 0.9rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.8rem' }}>
-                  ➕ Ajouter un élève à ce cours
-                </button>
-              )}
-            </div>
-          )}
+      {!loading && coursAVenir.length === 0 && (
+        <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <p style={{ color: '#888', margin: 0 }}>Aucun cours prévu dans les 14 prochains jours.</p>
         </div>
-        )
-      })}
+      )}
+
+      {coursAVenir.map(item => <CoursCard key={item.id} item={item} />)}
     </div>
   )
 }
