@@ -773,7 +773,7 @@ export default function CreneauxManager() {
                                 <select value={b.cheval_id || ''} onChange={e => assignerChevalBooking(b.id, e.target.value, slot.id)}
                                   style={{ padding: '0.25rem', borderRadius: '5px', border: '1px solid #ddd', fontSize: '0.8rem' }}>
                                   <option value="">—</option>
-                                  {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}</option>)}
+                                  {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}{ch.note ? ` — ⚠️ ${ch.note}` : ''}</option>)}
                                 </select>
                               </td>
                               <td style={{ padding: '0.4rem', textAlign: 'center' }}>
@@ -857,7 +857,7 @@ export default function CreneauxManager() {
                                 <select value={b.cheval_id || ''} onChange={e => assignerChevalBooking(b.id, e.target.value, slot.id)}
                                   style={{ padding: '0.25rem', borderRadius: '5px', border: '1px solid #ddd', fontSize: '0.8rem' }}>
                                   <option value="">—</option>
-                                  {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}</option>)}
+                                  {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}{ch.note ? ` — ⚠️ ${ch.note}` : ''}</option>)}
                                 </select>
                               </td>
                               <td style={{ padding: '0.4rem', textAlign: 'center' }}>

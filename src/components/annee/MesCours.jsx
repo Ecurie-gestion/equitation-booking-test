@@ -284,7 +284,7 @@ export default function MesCours() {
                   <select value={rider.cheval_id || ''} onChange={e => assignerCheval(item, rider, e.target.value)}
                     style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}>
                     <option value="">🐴 Cheval...</option>
-                    {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}</option>)}
+                    {chevaux.map(ch => <option key={ch.id} value={ch.id}>{ch.nom}{ch.note ? ` — ⚠️ ${ch.note}` : ''}</option>)}
                   </select>
                   <button onClick={() => marquerPresence(item, rider, true)}
                     style={{ background: rider.present === true ? COLORS.green : '#eee', color: rider.present === true ? 'white' : '#666', border: 'none', padding: '0.5rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>

@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { COLORS, SOIN_TYPES } from '../../lib/theme'
 import { toLocalISODate } from '../../lib/dates'
 
-const EMPTY = { nom: '', description: '' }
+const EMPTY = { nom: '', description: '', note: '' }
 const EMPTY_SOIN = { type: 'vaccin', date: toLocalISODate(new Date()), note: '' }
 
 export default function ChevauxManager() {
@@ -87,7 +87,7 @@ export default function ChevauxManager() {
   }
 
   function startEdit(cheval) {
-    setForm({ nom: cheval.nom, description: cheval.description || '' })
+    setForm({ nom: cheval.nom, description: cheval.description || '', note: cheval.note || '' })
     setEditingId(cheval.id)
     setShowForm(true)
   }
@@ -149,11 +149,18 @@ export default function ChevauxManager() {
       {showForm && (
         <div style={{ background: 'white', borderRadius: '16px', padding: '1.2rem', marginBottom: '1.5rem', boxShadow: `0 4px 16px rgba(74,168,216,0.15)`, border: `2px solid ${COLORS.sky}` }}>
           <h4 style={{ marginTop: 0, color: COLORS.navy, fontSize: '0.95rem' }}>{editingId ? '✏️ Modifier le cheval' : '➕ Nouveau cheval'}</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem', marginBottom: '0.8rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem', marginBottom: '0.6rem' }}>
             <input placeholder="Nom *" value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })}
               style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
             <input placeholder="Description (optionnel)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
               style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem' }} />
+          </div>
+          <div style={{ marginBottom: '0.8rem' }}>
+            <input placeholder="Note visible par les cavaliers (ex: cloches + guêtres, ne pas monter...)" value={form.note} onChange={e => setForm({ ...form, note: e.target.value })}
+              style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box' }} />
+            <p style={{ margin: '0.3rem 0 0 0', color: '#aaa', fontSize: '0.75rem' }}>
+              Affichée sous le nom du cheval dans "Aujourd'hui &amp; demain". Laisse vide pour ne rien afficher.
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button onClick={save}
@@ -180,6 +187,11 @@ export default function ChevauxManager() {
                   <div>
                     <strong style={{ color: COLORS.navy }}>🐴 {ch.nom}</strong>
                     {ch.description && <p style={{ margin: '0.2rem 0 0 0', color: '#888', fontSize: '0.8rem' }}>{ch.description}</p>}
+                    {ch.note && (
+                      <p style={{ margin: '0.3rem 0 0 0', color: '#a86a1a', background: '#fff3cd', display: 'inline-block', padding: '0.1rem 0.5rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        ⚠️ {ch.note}
+                      </p>
+                    )}
                     {ouvertSoins !== ch.id && dernierSoin && (
                       <p style={{ margin: '0.3rem 0 0 0', color: '#aaa', fontSize: '0.75rem' }}>
                         Dernier soin : {SOIN_TYPES.find(t => t.value === dernierSoin.type)?.label || dernierSoin.type} le {new Date(dernierSoin.date).toLocaleDateString('fr-FR')}
