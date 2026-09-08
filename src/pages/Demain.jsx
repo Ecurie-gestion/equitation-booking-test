@@ -23,7 +23,7 @@ async function fetchJour(dateStr) {
   const avecPresences = await Promise.all((seancesData || []).map(async s => {
     const { data: presencesData } = await supabase
       .from('presences')
-      .select('*, cavaliers(prenom, nom), chevaux(nom)')
+      .select('*, cavaliers(prenom, nom), chevaux(nom, note)')
       .eq('seance_id', s.id)
     return { ...s, presences: presencesData || [] }
   }))
@@ -36,7 +36,7 @@ async function fetchJour(dateStr) {
   const avecBookings = await Promise.all((libresData || []).map(async s => {
     const { data: bookingsData } = await supabase
       .from('bookings')
-      .select('*, chevaux(nom)')
+      .select('*, chevaux(nom, note)')
       .eq('slot_id', s.id)
     return { ...s, bookings: bookingsData || [] }
   }))
@@ -51,7 +51,7 @@ async function fetchJour(dateStr) {
       heure: s.creneaux_fixes?.heure_debut?.slice(0, 5) || '',
       label: s.creneaux_fixes?.niveaux || '',
       kind: 'fixe',
-      rows: s.presences.map(p => ({ id: p.id, cavalier: p.cavaliers?.prenom, cheval: p.chevaux?.nom })),
+      rows: s.presences.map(p => ({ id: p.id, cavalier: p.cavaliers?.prenom, cheval: p.chevaux?.nom, chevalNote: p.chevaux?.note })),
       messageVide: 'Liste des cavaliers pas encore disponible.'
     })),
     ...avecBookings.map(s => ({
@@ -59,7 +59,7 @@ async function fetchJour(dateStr) {
       heure: s.time_start?.slice(0, 5) || '',
       label: s.title,
       kind: 'libre',
-      rows: s.bookings.map(b => ({ id: b.id, cavalier: b.child_name, cheval: b.chevaux?.nom })),
+      rows: s.bookings.map(b => ({ id: b.id, cavalier: b.child_name, cheval: b.chevaux?.nom, chevalNote: b.chevaux?.note })),
       messageVide: 'Aucun cavalier inscrit pour ce créneau.'
     }))
   ].sort((a, b) => a.heure.localeCompare(b.heure))
@@ -102,7 +102,14 @@ function SectionJour({ titre, dateAffichee, cours, messageVide }) {
                 {c.rows.map(r => (
                   <tr key={r.id} style={{ borderBottom: `1px solid ${COLORS.beige}` }}>
                     <td style={{ padding: '0.4rem 0', color: COLORS.text }}>{r.cavalier}</td>
-                    <td style={{ padding: '0.4rem 0', color: COLORS.text }}>{r.cheval || '—'}</td>
+                    <td style={{ padding: '0.4rem 0', color: COLORS.text }}>
+                      {r.cheval || '—'}
+                      {r.chevalNote && (
+                        <div style={{ color: '#a86a1a', fontSize: '0.78rem', fontWeight: 'bold', marginTop: '0.1rem' }}>
+                          ⚠️ {r.chevalNote}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
