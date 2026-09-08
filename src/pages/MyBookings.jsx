@@ -119,7 +119,8 @@ export default function MyBookings({ onBack }) {
             heureDebut: prochaineSeanceFixe.creneaux_fixes?.heure_debut?.slice(0, 5),
             heureFin: prochaineSeanceFixe.creneaux_fixes?.heure_fin?.slice(0, 5),
             titre: prochaineSeanceFixe.creneaux_fixes?.niveaux || 'Cours fixe',
-            kind: 'fixe'
+            kind: 'fixe',
+            note: prochaineSeanceFixe.note
           })
         }
       }
@@ -144,7 +145,7 @@ export default function MyBookings({ onBack }) {
 
     const { data: bookingsNom } = await supabase
       .from('bookings')
-      .select('*, slots(title, date, time_start, time_end)')
+      .select('*, slots(title, date, time_start, time_end, note)')
       .ilike('child_name', prenom.trim())
       .ilike('child_nom', nom.trim())
     const prochainLibre = (bookingsNom || [])
@@ -156,7 +157,8 @@ export default function MyBookings({ onBack }) {
         heureDebut: prochainLibre.slots.time_start?.slice(0, 5),
         heureFin: prochainLibre.slots.time_end?.slice(0, 5),
         titre: prochainLibre.slots.title || 'Créneau libre',
-        kind: 'libre'
+        kind: 'libre',
+        note: prochainLibre.slots.note
       })
     }
 
@@ -178,7 +180,7 @@ export default function MyBookings({ onBack }) {
     // d'une réservation de créneau libre portant ce nom.
     const { data: bookingsNom } = await supabase
       .from('bookings')
-      .select('*, slots(title, date, time_start, time_end)')
+      .select('*, slots(title, date, time_start, time_end, note)')
       .ilike('child_name', prenom.trim())
       .ilike('child_nom', nom.trim())
     const bookingsVerifies = (bookingsNom || []).filter(b => contactCorrespond(contact, b.email, b.phone))
@@ -244,13 +246,14 @@ export default function MyBookings({ onBack }) {
             heureDebut: s.creneaux_fixes?.heure_debut?.slice(0, 5),
             heureFin: s.creneaux_fixes?.heure_fin?.slice(0, 5),
             titre: s.creneaux_fixes?.niveaux || 'Cours fixe',
-            kind: 'fixe'
+            kind: 'fixe',
+            note: s.note
           }))
       }
 
       const { data: presencesPassees } = await supabase
         .from('presences')
-        .select('*, seances(date, creneaux_fixes(niveaux, heure_debut, heure_fin))')
+        .select('*, seances(date, note, creneaux_fixes(niveaux, heure_debut, heure_fin))')
         .eq('cavalier_id', cavalier.id)
 
       coursFixesPasses = (presencesPassees || [])
@@ -262,7 +265,8 @@ export default function MyBookings({ onBack }) {
           heureFin: p.seances.creneaux_fixes?.heure_fin?.slice(0, 5),
           titre: p.seances.creneaux_fixes?.niveaux || 'Cours fixe',
           kind: 'fixe',
-          present: p.present
+          present: p.present,
+          note: p.seances.note
         }))
 
       const { data: stages } = await supabase
@@ -292,8 +296,8 @@ export default function MyBookings({ onBack }) {
         }))
 
       const [{ data: bookingsParId }, { data: bookingsParNom }] = await Promise.all([
-        supabase.from('bookings').select('*, slots(title, date, time_start, time_end)').eq('cavalier_id', cavalier.id),
-        supabase.from('bookings').select('*, slots(title, date, time_start, time_end)').ilike('child_name', prenom.trim()).ilike('child_nom', nom.trim())
+        supabase.from('bookings').select('*, slots(title, date, time_start, time_end, note)').eq('cavalier_id', cavalier.id),
+        supabase.from('bookings').select('*, slots(title, date, time_start, time_end, note)').ilike('child_name', prenom.trim()).ilike('child_nom', nom.trim())
       ])
       const bookingsMap = new Map()
       ;[...(bookingsParId || []), ...(bookingsParNom || [])].forEach(b => bookingsMap.set(b.id, b))
@@ -313,7 +317,8 @@ export default function MyBookings({ onBack }) {
         heureDebut: b.slots.time_start?.slice(0, 5),
         heureFin: b.slots.time_end?.slice(0, 5),
         titre: b.slots.title || 'Créneau libre',
-        kind: 'libre'
+        kind: 'libre',
+        note: b.slots.note
       }))
 
     const libreAVenir = bookingsLibresFormates.filter(b => b.date >= today)
@@ -349,6 +354,11 @@ export default function MyBookings({ onBack }) {
         {item.heureDebut && (
           <p style={{ margin: '0.2rem 0', color: passe ? '#aaa' : COLORS.textLight, fontSize: '0.9rem' }}>
             🕐 {item.heureDebut}{item.heureFin ? ` – ${item.heureFin}` : ''}
+          </p>
+        )}
+        {item.note && (
+          <p style={{ margin: '0.4rem 0 0 0', padding: '0.3rem 0.6rem', background: '#fff3cd', color: '#a86a1a', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold', display: 'inline-block' }}>
+            ⚠️ {item.note}
           </p>
         )}
         {passe && item.present === true && <p style={{ margin: '0.4rem 0 0 0', color: '#4a9d4a', fontSize: '0.85rem', fontWeight: 'bold' }}>✓ Présent(e)</p>}
