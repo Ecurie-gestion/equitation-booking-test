@@ -29,6 +29,14 @@ export default function Calendar({ onSelectSlot }) {
     const { data: slotsData } = await supabase
       .from('slots_with_availability')
       .select('*')
+    // slots_with_availability est une vue : elle ne reflète pas forcément
+    // automatiquement une colonne ajoutée après sa création (ex: note).
+    // On récupère donc la note directement depuis la table et on la fusionne.
+    const { data: slotsNotes } = await supabase
+      .from('slots')
+      .select('id, note')
+    const notesParSlot = new Map((slotsNotes || []).map(s => [s.id, s.note]))
+    const slotsAvecNote = (slotsData || []).map(s => ({ ...s, note: notesParSlot.get(s.id) }))
     const { data: eventsData } = await supabase
       .from('events')
       .select('*')
@@ -46,7 +54,7 @@ export default function Calendar({ onSelectSlot }) {
       return { ...e, places_remaining: e.capacite_max - (count || 0) }
     }))
 
-    setSlots(slotsData || [])
+    setSlots(slotsAvecNote)
     setEvents(eventsAvecPlaces)
     setSeances(seancesData || [])
   }
@@ -68,7 +76,8 @@ export default function Calendar({ onSelectSlot }) {
           type: 'cours_fixe',
           title: s.creneaux_fixes?.niveaux || 'Cours fixe',
           time_start: s.creneaux_fixes?.heure_debut,
-          time_end: s.creneaux_fixes?.heure_fin
+          time_end: s.creneaux_fixes?.heure_fin,
+          note: s.note
         })
       }
     })
@@ -208,6 +217,11 @@ export default function Calendar({ onSelectSlot }) {
                   <p style={{ margin: '0.2rem 0', color: '#555', fontSize: '0.9rem' }}>
                     🕐 {e.time_start?.slice(0, 5)} – {e.time_end?.slice(0, 5)}
                   </p>
+                  {e.note && (
+                    <p style={{ margin: '0.3rem 0', padding: '0.3rem 0.6rem', background: '#fff3cd', color: '#a86a1a', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                      ⚠️ {e.note}
+                    </p>
+                  )}
                 </>
               )}
               {e.type === 'cours' && (
@@ -216,6 +230,11 @@ export default function Calendar({ onSelectSlot }) {
                   <p style={{ margin: '0.2rem 0', color: '#555', fontSize: '0.9rem' }}>
                     🕐 {e.time_start.slice(0,5)} – {e.time_end.slice(0,5)}
                   </p>
+                  {e.note && (
+                    <p style={{ margin: '0.3rem 0', padding: '0.3rem 0.6rem', background: '#fff3cd', color: '#a86a1a', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                      ⚠️ {e.note}
+                    </p>
+                  )}
                   <p style={{ margin: '0.2rem 0', fontSize: '0.85rem', fontWeight: 'bold', color: e.places_remaining > 0 ? '#2ecc71' : '#e74c3c' }}>
                     {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
                   </p>
