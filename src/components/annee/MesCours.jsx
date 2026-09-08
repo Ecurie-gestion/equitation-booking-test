@@ -24,6 +24,8 @@ export default function MesCours() {
   const [ajoutId, setAjoutId] = useState('')
   const [message, setMessage] = useState(null)
   const [packsEpuises, setPacksEpuises] = useState([])
+  const [noteEdit, setNoteEdit] = useState(null)
+  const [noteValue, setNoteValue] = useState('')
 
   useEffect(() => {
     fetchTout()
@@ -101,6 +103,7 @@ export default function MesCours() {
         heure: s.creneaux_fixes?.heure_debut?.slice(0, 5) || '',
         heureFin: s.creneaux_fixes?.heure_fin?.slice(0, 5) || '',
         label: s.creneaux_fixes?.niveaux || 'Cours fixe',
+        note: s.note || '',
         riders: (presencesFinales || []).map(p => ({
           rowId: p.id,
           cavalier_id: p.cavalier_id,
@@ -129,6 +132,7 @@ export default function MesCours() {
         heure: s.time_start?.slice(0, 5) || '',
         heureFin: s.time_end?.slice(0, 5) || '',
         label: s.title || 'Créneau libre',
+        note: s.note || '',
         riders: (bookings || []).map(b => ({
           rowId: b.id,
           nom: `${b.child_name || ''} ${b.child_nom || ''}`.trim(),
@@ -212,6 +216,14 @@ export default function MesCours() {
     rafraichirUnCours(item)
   }
 
+  async function enregistrerNote(item) {
+    const table = item.kind === 'fixe' ? 'seances' : 'slots'
+    const note = noteValue.trim() || null
+    await supabase.from(table).update({ note }).eq('id', item.rawId)
+    setCours(prev => prev.map(c => c.id === item.id ? { ...c, note: note || '' } : c))
+    setNoteEdit(null)
+  }
+
   async function retirer(item, rider) {
     if (!confirm(`Retirer ${rider.nom} de ce cours ?`)) return
     const table = item.kind === 'fixe' ? 'presences' : 'bookings'
@@ -266,6 +278,11 @@ export default function MesCours() {
             <div style={{ color: '#888', fontSize: '0.8rem', textTransform: 'capitalize', marginBottom: '0.15rem' }}>{formatDate(item.date)}</div>
             <strong style={{ color: COLORS.navy, fontSize: '1.05rem' }}>{item.heure}</strong>
             <span style={{ color: '#666', marginLeft: '0.6rem' }}>{item.label}</span>
+            {item.note && (
+              <div style={{ marginTop: '0.35rem', color: '#a86a1a', background: '#fff3cd', display: 'inline-block', padding: '0.15rem 0.6rem', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 'bold' }}>
+                ⚠️ {item.note}
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <span style={{ color: '#888', fontSize: '0.85rem' }}>{item.riders.length} élève{item.riders.length > 1 ? 's' : ''}</span>
@@ -322,6 +339,31 @@ export default function MesCours() {
                 ➕ Ajouter un élève à ce cours
               </button>
             )}
+
+            <div style={{ marginTop: '1rem', paddingTop: '0.9rem', borderTop: '1px solid #eee' }}>
+              {noteEdit === item.id ? (
+                <div>
+                  <input value={noteValue} onChange={e => setNoteValue(e.target.value)}
+                    placeholder="Ex: Reporté au 12/09 à 18h, Annulé..."
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => enregistrerNote(item)}
+                      style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      Enregistrer
+                    </button>
+                    <button onClick={() => setNoteEdit(null)}
+                      style={{ background: '#eee', border: 'none', padding: '0.4rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => { setNoteEdit(item.id); setNoteValue(item.note || '') }}
+                  style={{ background: 'none', border: '1px dashed #d9a441', color: '#a86a1a', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem' }}>
+                  {item.note ? '✏️ Modifier la note' : '➕ Ajouter une note (reporté, annulé...)'}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
