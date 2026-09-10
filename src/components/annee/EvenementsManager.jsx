@@ -22,6 +22,26 @@ export default function EvenementsManager() {
 
   useEffect(() => { fetchEvents(); fetchCavaliers() }, [])
 
+  // Même principe que pour les créneaux : envoie une demande de
+  // synchronisation à la fonction technique, sans jamais bloquer l'action
+  // côté site si ça échoue (compte Google pas connecté, etc.).
+  async function syncCalendarEvent(eventId, action) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/.netlify/functions/update-calendar-event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
+        body: JSON.stringify({ event_id: eventId, action })
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   async function fetchEvents() {
     const { data } = await supabase.from('events').select('*').order('date_start')
     setEvents(data || [])
@@ -76,9 +96,13 @@ export default function EvenementsManager() {
       return
     }
     const payload = { ...newEvent, capacite_max: newEvent.capacite_max ? parseInt(newEvent.capacite_max) : null }
-    const { error } = await supabase.from('events').insert(payload)
-    if (!error) {
-      setMessage({ type: 'success', text: `${newEvent.type === 'stage' ? 'Stage' : 'Concours'} créé !` })
+    const { data, error } = await supabase.from('events').insert(payload).select().single()
+    if (!error && data) {
+      const syncOk = await syncCalendarEvent(data.id, 'create')
+      setMessage({
+        type: 'success',
+        text: `${newEvent.type === 'stage' ? 'Stage' : 'Concours'} créé !${syncOk ? ' Ajouté à Google Agenda.' : ' (non synchronisé avec Google Agenda — vérifie la connexion du compte Google)'}`
+      })
       setNewEvent(EMPTY_EVENT)
       setShowForm(false)
       fetchEvents()
@@ -89,6 +113,7 @@ export default function EvenementsManager() {
 
   async function deleteEvent(id) {
     if (!confirm('Supprimer cet événement ? Les inscriptions liées seront aussi supprimées.')) return
+    await syncCalendarEvent(id, 'delete')
     await supabase.from('events').delete().eq('id', id)
     fetchEvents()
   }

@@ -122,6 +122,25 @@ export default function CreneauxManager() {
     }
   }
 
+  // Même principe pour les cours fixes (créneaux récurrents chaque semaine) :
+  // un seul événement Google Agenda récurrent par cours fixe.
+  async function syncCalendarFixe(creneauFixeId, action) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/.netlify/functions/update-calendar-fixe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
+        body: JSON.stringify({ creneau_fixe_id: creneauFixeId, action })
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   async function fetchVacances() {
     const { data } = await supabase.from('vacances_scolaires').select('*').order('date_debut')
     setPeriodesVacances(data || [])
@@ -220,9 +239,13 @@ export default function CreneauxManager() {
       return
     }
     const payload = { ...formFixe, jour_semaine: parseInt(formFixe.jour_semaine), capacite_max: parseInt(formFixe.capacite_max) }
-    const { error } = await supabase.from('creneaux_fixes').insert(payload)
-    if (!error) {
-      setMessage({ type: 'success', text: 'Créneau fixe créé.' })
+    const { data, error } = await supabase.from('creneaux_fixes').insert(payload).select().single()
+    if (!error && data) {
+      const syncOk = await syncCalendarFixe(data.id, 'create')
+      setMessage({
+        type: 'success',
+        text: syncOk ? 'Créneau fixe créé et ajouté à Google Agenda (chaque semaine) !' : 'Créneau fixe créé (non synchronisé avec Google Agenda — vérifie la connexion du compte Google).'
+      })
       setShowForm(false)
       fetchCreneauxFixes()
     } else {
@@ -281,6 +304,9 @@ export default function CreneauxManager() {
     const payload = { ...editFormFixe, jour_semaine: parseInt(editFormFixe.jour_semaine), capacite_max: parseInt(editFormFixe.capacite_max) }
     const { error } = await supabase.from('creneaux_fixes').update(payload).eq('id', editingFixeId)
     if (!error) {
+      // Répercute aussi le changement (jour/heure/niveaux) dans l'événement
+      // récurrent Google Agenda.
+      await syncCalendarFixe(editingFixeId, 'update')
       setMessage({ type: 'success', text: 'Créneau modifié.' })
       setEditingFixeId(null)
       fetchCreneauxFixes()
@@ -291,12 +317,16 @@ export default function CreneauxManager() {
 
   async function desactiverFixe(id) {
     if (!confirm("Désactiver ce créneau fixe ? Les inscriptions en cours resteront visibles dans l'historique.")) return
+    // Retire l'événement récurrent de Google Agenda (un cours désactivé ne
+    // doit plus apparaître dans les prochaines semaines).
+    await syncCalendarFixe(id, 'delete')
     await supabase.from('creneaux_fixes').update({ actif: false }).eq('id', id)
     fetchCreneauxFixes()
   }
 
   async function supprimerFixe(id) {
     if (!confirm('Supprimer définitivement ce créneau fixe, ainsi que toutes ses inscriptions, séances et présences ? Cette action est irréversible.')) return
+    await syncCalendarFixe(id, 'delete')
     await supabase.from('creneaux_fixes').delete().eq('id', id)
     setOpenItem(null)
     fetchCreneauxFixes()
