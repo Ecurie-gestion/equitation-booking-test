@@ -69,13 +69,58 @@ export default function CreneauxManager() {
   const [showVacancesForm, setShowVacancesForm] = useState(false)
   const [newVacances, setNewVacances] = useState(EMPTY_VACANCES)
 
+  // Google Agenda : null = pas encore vérifié, true/false = connecté ou non
+  const [googleConnected, setGoogleConnected] = useState(null)
+
   useEffect(() => {
     fetchCreneauxFixes()
     fetchCreneauxLibres()
     fetchCavaliers()
     fetchChevaux()
     fetchVacances()
+    checkGoogleStatus()
+
+    // Retour depuis la connexion Google (redirection faite par la fonction
+    // technique google-callback) : on affiche un message puis on nettoie l'URL.
+    if (new URLSearchParams(window.location.search).get('google') === 'connected') {
+      setMessage({ type: 'success', text: '✅ Compte Google connecté ! Les prochains créneaux libres seront ajoutés à ton agenda.' })
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [])
+
+  async function checkGoogleStatus() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) { setGoogleConnected(false); return }
+      const res = await fetch('/.netlify/functions/google-status', {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      })
+      const data = await res.json()
+      setGoogleConnected(!!data.connected)
+    } catch {
+      setGoogleConnected(false)
+    }
+  }
+
+  // Envoie une demande de synchronisation à la fonction technique. Ne bloque
+  // jamais l'action côté site si ça échoue (compte pas connecté, etc.) —
+  // renvoie simplement si ça a marché, pour informer via un message.
+  async function syncCalendar(slotId, action) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/.netlify/functions/update-calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
+        },
+        body: JSON.stringify({ slot_id: slotId, action })
+      })
+      return res.ok
+    } catch {
+      return false
+    }
+  }
 
   async function fetchVacances() {
     const { data } = await supabase.from('vacances_scolaires').select('*').order('date_debut')
@@ -207,25 +252,7 @@ export default function CreneauxManager() {
     const time_end = `${String(endHour).padStart(2, '0')}:${startMin}`
     const { data, error } = await supabase.from('slots').insert({ ...formLibre, time_end }).select().single()
     if (!error && data) {
-      let syncOk = false
-      try {
-        // On envoie le jeton de la session admin en cours : la fonction
-        // serverless vérifie qu'il s'agit bien d'un admin connecté avant
-        // d'écrire dans Google Agenda (sinon n'importe qui pourrait
-        // déclencher des écritures juste en connaissant l'URL de la fonction).
-        const { data: { session } } = await supabase.auth.getSession()
-        const res = await fetch('/.netlify/functions/update-calendar', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {})
-          },
-          body: JSON.stringify({ slot_id: data.id, action: 'create' })
-        })
-        syncOk = res.ok
-      } catch {
-        syncOk = false
-      }
+      const syncOk = await syncCalendar(data.id, 'create')
       setMessage({
         type: 'success',
         text: syncOk ? 'Créneau libre créé et ajouté à Google Agenda !' : 'Créneau libre créé (non synchronisé avec Google Agenda — vérifie la connexion du compte Google).'
@@ -342,6 +369,11 @@ export default function CreneauxManager() {
 
     const { error } = await supabase.from('slots').update({ ...editFormLibre, time_end }).eq('id', editingLibreId)
     if (!error) {
+      // Répercute aussi le changement dans Google Agenda (ou crée l'événement
+      // s'il n'existait pas encore, par ex. un créneau créé avant la mise en
+      // place de la connexion Google).
+      await syncCalendar(editingLibreId, 'update')
+
       const { data: inscrits } = await supabase.from('bookings').select('email, child_name').eq('slot_id', editingLibreId).neq('email', '')
       if (inscrits && inscrits.length > 0) {
         const emails = inscrits.map(b => b.email).filter(Boolean)
@@ -364,6 +396,12 @@ export default function CreneauxManager() {
     if (!confirm('Supprimer ce créneau et toutes ses inscriptions ?')) return
     const slot = creneauxLibres.find(s => s.id === slotId)
     const { data: inscrits } = await supabase.from('bookings').select('email, child_name').eq('slot_id', slotId).neq('email', '')
+
+    // Retire l'événement de Google Agenda AVANT de supprimer le créneau en
+    // base (sinon la fonction technique ne peut plus retrouver l'événement
+    // Google correspondant).
+    await syncCalendar(slotId, 'delete')
+
     await supabase.from('slots').delete().eq('id', slotId)
     if (inscrits && inscrits.length > 0) {
       const emails = inscrits.map(b => b.email).filter(Boolean)
@@ -892,6 +930,33 @@ export default function CreneauxManager() {
             style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '8px', cursor: generating ? 'wait' : 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
             {generating ? '⏳ Génération...' : '🔄 Générer les prochaines dates de cours fixes'}
           </button>
+        </div>
+
+        <div style={{ marginBottom: '1.2rem', paddingBottom: '1.2rem', borderBottom: '1px solid #e5e5e5' }}>
+          <h5 style={{ color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.88rem' }}>📅 Google Agenda</h5>
+          <p style={{ color: '#999', fontSize: '0.8rem', margin: '0 0 0.6rem 0' }}>
+            Une fois connecté, chaque créneau libre créé, modifié ou supprimé est automatiquement reflété dans ton agenda Google.
+          </p>
+          {googleConnected === true && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
+              <span style={{ color: '#155724', background: '#d4edda', padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 'bold' }}>
+                ✅ Compte Google connecté
+              </span>
+              <a href="/.netlify/functions/google-auth"
+                style={{ color: '#999', fontSize: '0.78rem' }}>
+                Reconnecter / changer de compte
+              </a>
+            </div>
+          )}
+          {googleConnected === false && (
+            <a href="/.netlify/functions/google-auth"
+              style={{ display: 'inline-block', background: COLORS.navy, color: 'white', padding: '0.6rem 1.1rem', borderRadius: '8px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 'bold' }}>
+              🔗 Connecter mon agenda Google
+            </a>
+          )}
+          {googleConnected === null && (
+            <p style={{ color: '#aaa', fontSize: '0.82rem', margin: 0 }}>Vérification de la connexion...</p>
+          )}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
