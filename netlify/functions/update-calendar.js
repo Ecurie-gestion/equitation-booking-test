@@ -66,6 +66,25 @@ exports.handler = async (event) => {
 
   if (!slot) return { statusCode: 404, body: 'Créneau introuvable' }
 
+  // Suppression : retire l'événement de Google Agenda (le créneau, lui, est
+  // supprimé côté site juste après par l'appelant). On appelle cette fonction
+  // AVANT de supprimer le créneau en base, sinon on ne pourrait plus retrouver
+  // l'id de l'événement Google à effacer.
+  if (action === 'delete') {
+    if (slot.gcal_event_id) {
+      const delRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${slot.gcal_event_id}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+      )
+      // 204 = supprimé, 404/410 = déjà absent côté Google : dans les deux cas
+      // c'est le résultat voulu, on ne traite pas ça comme une erreur.
+      if (!delRes.ok && delRes.status !== 404 && delRes.status !== 410) {
+        return { statusCode: 502, body: "Erreur lors de la suppression dans Google Agenda" }
+      }
+    }
+    return { statusCode: 200, body: 'Événement supprimé de Google Agenda' }
+  }
+
   const { data: bookings } = await supabase
     .from('bookings')
     .select('child_name, parent_name')
