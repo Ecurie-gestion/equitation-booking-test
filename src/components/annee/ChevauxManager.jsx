@@ -1,10 +1,84 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS, SOIN_TYPES } from '../../lib/theme'
-import { toLocalISODate } from '../../lib/dates'
+import { toLocalISODate, getWeekRange } from '../../lib/dates'
 
 const EMPTY = { nom: '', description: '', note: '' }
 const EMPTY_SOIN = { type: 'vaccin', date: toLocalISODate(new Date()), note: '' }
+
+// Durée en heures (décimal) entre deux heures "HH:MM:SS" (format Postgres time).
+function dureeHeures(debut, fin) {
+  if (!debut || !fin) return 0
+  const [h1, m1] = debut.split(':').map(Number)
+  const [h2, m2] = fin.split(':').map(Number)
+  return Math.max(0, (h2 * 60 + m2 - (h1 * 60 + m1)) / 60)
+}
+
+// Formate un nombre d'heures décimal en "2h" ou "2h30".
+function formatHeures(h) {
+  const totalMinutes = Math.round((h || 0) * 60)
+  const hh = Math.floor(totalMinutes / 60)
+  const mm = totalMinutes % 60
+  return mm === 0 ? `${hh}h` : `${hh}h${String(mm).padStart(2, '0')}`
+}
+
+function VueHeuresParCheval({ chevaux, weekOffset, setWeekOffset, heuresParCheval, loading }) {
+  const { lundiDate, dimancheDate } = getWeekRange(weekOffset)
+  const chevauxActifs = [...chevaux.filter(c => c.actif)]
+    .sort((a, b) => (heuresParCheval[a.id] || 0) - (heuresParCheval[b.id] || 0))
+  const maxHeures = Math.max(1, ...chevauxActifs.map(c => heuresParCheval[c.id] || 0))
+
+  return (
+    <div style={{ background: 'white', borderRadius: '16px', padding: '1rem 1.2rem', marginBottom: '1.5rem', boxShadow: '0 4px 16px rgba(26,39,68,0.06)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <h4 style={{ margin: 0, color: COLORS.navy, fontSize: '0.95rem' }}>⏱️ Heures travaillées par cheval</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button onClick={() => setWeekOffset(w => w - 1)}
+            style={{ background: COLORS.beige, border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>◀</button>
+          <span style={{ fontSize: '0.85rem', color: '#666', minWidth: '160px', textAlign: 'center' }}>
+            {lundiDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {dimancheDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+            {weekOffset === 0 && ' (en cours)'}
+          </span>
+          <button onClick={() => setWeekOffset(w => w + 1)}
+            style={{ background: COLORS.beige, border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>▶</button>
+          {weekOffset !== 0 && (
+            <button onClick={() => setWeekOffset(0)}
+              style={{ background: 'none', border: 'none', color: COLORS.sky, cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}>
+              Semaine en cours
+            </button>
+          )}
+        </div>
+      </div>
+
+      {loading && <p style={{ color: '#aaa', fontSize: '0.85rem', margin: 0 }}>Chargement...</p>}
+
+      {!loading && chevauxActifs.length === 0 && (
+        <p style={{ color: '#aaa', fontSize: '0.85rem', margin: 0 }}>Aucun cheval actif.</p>
+      )}
+
+      {!loading && chevauxActifs.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          {chevauxActifs.map(ch => {
+            const heures = heuresParCheval[ch.id] || 0
+            return (
+              <div key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ width: '110px', flexShrink: 0, fontSize: '0.85rem', color: COLORS.navy, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {ch.nom}
+                </span>
+                <div style={{ flex: 1, background: COLORS.beige, borderRadius: '6px', height: '10px', overflow: 'hidden' }}>
+                  <div style={{ width: `${(heures / maxHeures) * 100}%`, background: heures === 0 ? '#ddd' : COLORS.sky, height: '100%', borderRadius: '6px' }} />
+                </div>
+                <span style={{ width: '50px', flexShrink: 0, textAlign: 'right', fontSize: '0.82rem', color: '#666' }}>
+                  {formatHeures(heures)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ChevauxManager() {
   const [chevaux, setChevaux] = useState([])
@@ -19,7 +93,52 @@ export default function ChevauxManager() {
   const [soinsParCheval, setSoinsParCheval] = useState({})
   const [formSoin, setFormSoin] = useState(EMPTY_SOIN)
 
+  // Heures travaillées par cheval, sur une semaine navigable (0 = semaine en cours)
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [heuresParCheval, setHeuresParCheval] = useState({})
+  const [loadingHeures, setLoadingHeures] = useState(true)
+
   useEffect(() => { fetchChevaux() }, [showInactifs])
+  useEffect(() => { fetchHeuresSemaine() }, [weekOffset])
+
+  async function fetchHeuresSemaine() {
+    setLoadingHeures(true)
+    const { debut, fin } = getWeekRange(weekOffset)
+
+    const totals = {}
+    function ajouter(chevalId, heures) {
+      if (!chevalId) return
+      totals[chevalId] = (totals[chevalId] || 0) + heures
+    }
+
+    // Cours fixes : on additionne les cours où le cheval a été présent
+    const { data: seancesData } = await supabase
+      .from('seances')
+      .select('date, annulee, creneaux_fixes(heure_debut, heure_fin), presences(cheval_id, present)')
+      .gte('date', debut)
+      .lte('date', fin)
+      .eq('annulee', false)
+
+    ;(seancesData || []).forEach(s => {
+      const duree = dureeHeures(s.creneaux_fixes?.heure_debut, s.creneaux_fixes?.heure_fin)
+      ;(s.presences || []).forEach(p => { if (p.present) ajouter(p.cheval_id, duree) })
+    })
+
+    // Créneaux libres : même logique
+    const { data: slotsData } = await supabase
+      .from('slots')
+      .select('date, time_start, time_end, bookings(cheval_id, present)')
+      .gte('date', debut)
+      .lte('date', fin)
+
+    ;(slotsData || []).forEach(s => {
+      const duree = dureeHeures(s.time_start, s.time_end)
+      ;(s.bookings || []).forEach(b => { if (b.present) ajouter(b.cheval_id, duree) })
+    })
+
+    setHeuresParCheval(totals)
+    setLoadingHeures(false)
+  }
 
   async function fetchChevaux() {
     let query = supabase.from('chevaux').select('*').order('nom')
@@ -145,6 +264,14 @@ export default function ChevauxManager() {
           <button onClick={() => setMessage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
         </div>
       )}
+
+      <VueHeuresParCheval
+        chevaux={chevaux}
+        weekOffset={weekOffset}
+        setWeekOffset={setWeekOffset}
+        heuresParCheval={heuresParCheval}
+        loading={loadingHeures}
+      />
 
       {showForm && (
         <div style={{ background: 'white', borderRadius: '16px', padding: '1.2rem', marginBottom: '1.5rem', boxShadow: `0 4px 16px rgba(74,168,216,0.15)`, border: `2px solid ${COLORS.sky}` }}>
