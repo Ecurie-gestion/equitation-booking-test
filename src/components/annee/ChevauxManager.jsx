@@ -22,32 +22,67 @@ function formatHeures(h) {
   return mm === 0 ? `${hh}h` : `${hh}h${String(mm).padStart(2, '0')}`
 }
 
-function VueHeuresParCheval({ chevaux, weekOffset, setWeekOffset, heuresParCheval, loading }) {
-  const { lundiDate, dimancheDate } = getWeekRange(weekOffset)
+function VueHeuresParCheval({ chevaux, viewMode, setViewMode, weekOffset, setWeekOffset, dayOffset, setDayOffset, heuresParCheval, loading }) {
   const chevauxActifs = [...chevaux.filter(c => c.actif)]
     .sort((a, b) => (heuresParCheval[a.id] || 0) - (heuresParCheval[b.id] || 0))
   const maxHeures = Math.max(1, ...chevauxActifs.map(c => heuresParCheval[c.id] || 0))
 
+  let labelPeriode, estPeriodeCourante
+  if (viewMode === 'semaine') {
+    const { lundiDate, dimancheDate } = getWeekRange(weekOffset)
+    labelPeriode = `${lundiDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${dimancheDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+    estPeriodeCourante = weekOffset === 0
+  } else {
+    const jourDate = new Date()
+    jourDate.setDate(jourDate.getDate() + dayOffset)
+    labelPeriode = jourDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })
+    estPeriodeCourante = dayOffset === 0
+  }
+
+  function precedent() {
+    if (viewMode === 'semaine') setWeekOffset(w => w - 1)
+    else setDayOffset(d => d - 1)
+  }
+  function suivant() {
+    if (viewMode === 'semaine') setWeekOffset(w => w + 1)
+    else setDayOffset(d => d + 1)
+  }
+  function revenirAlaCourante() {
+    if (viewMode === 'semaine') setWeekOffset(0)
+    else setDayOffset(0)
+  }
+
   return (
     <div style={{ background: 'white', borderRadius: '16px', padding: '1rem 1.2rem', marginBottom: '1.5rem', boxShadow: '0 4px 16px rgba(26,39,68,0.06)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h4 style={{ margin: 0, color: COLORS.navy, fontSize: '0.95rem' }}>⏱️ Heures travaillées par cheval</h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <button onClick={() => setWeekOffset(w => w - 1)}
-            style={{ background: COLORS.beige, border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>◀</button>
-          <span style={{ fontSize: '0.85rem', color: '#666', minWidth: '160px', textAlign: 'center' }}>
-            {lundiDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – {dimancheDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-            {weekOffset === 0 && ' (en cours)'}
-          </span>
-          <button onClick={() => setWeekOffset(w => w + 1)}
-            style={{ background: COLORS.beige, border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>▶</button>
-          {weekOffset !== 0 && (
-            <button onClick={() => setWeekOffset(0)}
-              style={{ background: 'none', border: 'none', color: COLORS.sky, cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}>
-              Semaine en cours
-            </button>
-          )}
+        <div style={{ display: 'flex', gap: '0.3rem' }}>
+          <button onClick={() => setViewMode('semaine')}
+            style={{ background: viewMode === 'semaine' ? COLORS.navy : COLORS.beige, color: viewMode === 'semaine' ? 'white' : '#666', border: 'none', borderRadius: '6px', padding: '0.3rem 0.7rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+            Semaine
+          </button>
+          <button onClick={() => setViewMode('jour')}
+            style={{ background: viewMode === 'jour' ? COLORS.navy : COLORS.beige, color: viewMode === 'jour' ? 'white' : '#666', border: 'none', borderRadius: '6px', padding: '0.3rem 0.7rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+            Jour
+          </button>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem' }}>
+        <button onClick={precedent}
+          style={{ background: COLORS.beige, border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>◀</button>
+        <span style={{ fontSize: '0.85rem', color: '#666', minWidth: '160px', textAlign: 'center', textTransform: viewMode === 'jour' ? 'capitalize' : 'none' }}>
+          {labelPeriode}
+          {estPeriodeCourante && (viewMode === 'semaine' ? ' (en cours)' : ' (aujourd\'hui)')}
+        </span>
+        <button onClick={suivant}
+          style={{ background: COLORS.beige, border: 'none', borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>▶</button>
+        {!estPeriodeCourante && (
+          <button onClick={revenirAlaCourante}
+            style={{ background: 'none', border: 'none', color: COLORS.sky, cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}>
+            {viewMode === 'semaine' ? 'Semaine en cours' : "Aujourd'hui"}
+          </button>
+        )}
       </div>
 
       {loading && <p style={{ color: '#aaa', fontSize: '0.85rem', margin: 0 }}>Chargement...</p>}
@@ -93,17 +128,27 @@ export default function ChevauxManager() {
   const [soinsParCheval, setSoinsParCheval] = useState({})
   const [formSoin, setFormSoin] = useState(EMPTY_SOIN)
 
-  // Heures travaillées par cheval, sur une semaine navigable (0 = semaine en cours)
+  // Heures travaillées par cheval, sur une semaine ou un jour navigable
+  // (weekOffset 0 = semaine en cours, dayOffset 0 = aujourd'hui)
+  const [viewMode, setViewMode] = useState('semaine')
   const [weekOffset, setWeekOffset] = useState(0)
+  const [dayOffset, setDayOffset] = useState(0)
   const [heuresParCheval, setHeuresParCheval] = useState({})
   const [loadingHeures, setLoadingHeures] = useState(true)
 
   useEffect(() => { fetchChevaux() }, [showInactifs])
-  useEffect(() => { fetchHeuresSemaine() }, [weekOffset])
+  useEffect(() => { fetchHeures() }, [viewMode, weekOffset, dayOffset])
 
-  async function fetchHeuresSemaine() {
+  async function fetchHeures() {
     setLoadingHeures(true)
-    const { debut, fin } = getWeekRange(weekOffset)
+    let debut, fin
+    if (viewMode === 'semaine') {
+      ;({ debut, fin } = getWeekRange(weekOffset))
+    } else {
+      const jour = new Date()
+      jour.setDate(jour.getDate() + dayOffset)
+      debut = fin = toLocalISODate(jour)
+    }
 
     const totals = {}
     function ajouter(chevalId, heures) {
@@ -267,8 +312,12 @@ export default function ChevauxManager() {
 
       <VueHeuresParCheval
         chevaux={chevaux}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
         weekOffset={weekOffset}
         setWeekOffset={setWeekOffset}
+        dayOffset={dayOffset}
+        setDayOffset={setDayOffset}
         heuresParCheval={heuresParCheval}
         loading={loadingHeures}
       />
