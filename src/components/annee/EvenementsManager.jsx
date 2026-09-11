@@ -4,7 +4,7 @@ import { COLORS, EVENT_TYPES } from '../../lib/theme'
 import { upsertCavalierDepuisReservation } from '../../lib/cavaliers'
 import EleveSelector from '../admin/EleveSelector'
 
-const EMPTY_EVENT = { title: '', type: 'stage', date_start: '', date_end: '', description: '', capacite_max: '', inscriptible: false }
+const EMPTY_EVENT = { title: '', type: 'stage', date_start: '', date_end: '', description: '', capacite_max: '', inscriptible: false, date_limite_inscription: '' }
 const EMPTY_INSCRIT = { parent_name: '', child_name: '', child_nom: '', email: '', phone: '' }
 
 export default function EvenementsManager() {
@@ -95,7 +95,11 @@ export default function EvenementsManager() {
       setMessage({ type: 'error', text: 'Remplis tous les champs obligatoires !' })
       return
     }
-    const payload = { ...newEvent, capacite_max: newEvent.capacite_max ? parseInt(newEvent.capacite_max) : null }
+    const payload = {
+      ...newEvent,
+      capacite_max: newEvent.capacite_max ? parseInt(newEvent.capacite_max) : null,
+      date_limite_inscription: newEvent.date_limite_inscription || null
+    }
     const { data, error } = await supabase.from('events').insert(payload).select().single()
     if (!error && data) {
       const syncOk = await syncCalendarEvent(data.id, 'create')
@@ -176,10 +180,20 @@ export default function EvenementsManager() {
                 🔓 Permettre l'inscription en ligne des parents
               </label>
               {newEvent.inscriptible && (
-                <div style={{ marginTop: '0.6rem', maxWidth: '260px' }}>
-                  <label style={{ display: 'block', color: COLORS.navy, marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.85rem' }}>Places max (optionnel)</label>
-                  <input type="number" min="1" placeholder="Illimité si vide" value={newEvent.capacite_max} onChange={e => setNewEvent({ ...newEvent, capacite_max: e.target.value })}
-                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.95rem', boxSizing: 'border-box' }} />
+                <div style={{ marginTop: '0.6rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
+                  <div>
+                    <label style={{ display: 'block', color: COLORS.navy, marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.85rem' }}>Places max (optionnel)</label>
+                    <input type="number" min="1" placeholder="Illimité si vide" value={newEvent.capacite_max} onChange={e => setNewEvent({ ...newEvent, capacite_max: e.target.value })}
+                      style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.95rem', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: COLORS.navy, marginBottom: '0.3rem', fontWeight: 'bold', fontSize: '0.85rem' }}>Date limite d'inscription (optionnel)</label>
+                    <input type="date" value={newEvent.date_limite_inscription} onChange={e => setNewEvent({ ...newEvent, date_limite_inscription: e.target.value })}
+                      style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.95rem', boxSizing: 'border-box' }} />
+                    <p style={{ margin: '0.3rem 0 0 0', color: '#aaa', fontSize: '0.75rem' }}>
+                      Passé cette date, les familles ne pourront plus s'inscrire en ligne. Laisse vide pour garder les inscriptions ouvertes jusqu'à l'événement.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -206,6 +220,11 @@ export default function EvenementsManager() {
                   Du {new Date(event.date_start + 'T12:00:00').toLocaleDateString('fr-FR')} au {new Date(event.date_end + 'T12:00:00').toLocaleDateString('fr-FR')}
                   {estInscriptible && ` · ${event.capacite_max ? `${(inscriptionsParEvent[event.id] || []).length}/${event.capacite_max} places` : 'places illimitées'}`}
                 </p>
+                {estInscriptible && event.date_limite_inscription && (
+                  <p style={{ margin: '0.1rem 0', color: '#a86a1a', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    ⏰ Inscriptions jusqu'au {new Date(event.date_limite_inscription + 'T12:00:00').toLocaleDateString('fr-FR')}
+                  </p>
+                )}
                 {event.description && <p style={{ margin: '0.1rem 0', color: '#888', fontSize: '0.8rem' }}>{event.description}</p>}
                 {!estInscriptible && event.type !== 'concours' && (
                   <p style={{ margin: '0.2rem 0 0 0', color: '#aaa', fontSize: '0.75rem', fontStyle: 'italic' }}>Inscription en ligne désactivée pour cet événement.</p>
