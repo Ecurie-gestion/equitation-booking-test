@@ -19,11 +19,16 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
 
     const { data: fraisEvent } = await supabase
       .from('events')
-      .select('date_end')
+      .select('date_end, date_limite_inscription')
       .eq('id', stage.id)
       .single()
     if (fraisEvent && fraisEvent.date_end < toLocalISODate(new Date())) {
       setError('Cet événement est déjà passé, il n\'est plus possible de s\'y inscrire.')
+      setLoading(false)
+      return
+    }
+    if (fraisEvent && fraisEvent.date_limite_inscription && fraisEvent.date_limite_inscription < toLocalISODate(new Date())) {
+      setError('La date limite d\'inscription pour cet événement est dépassée.')
       setLoading(false)
       return
     }

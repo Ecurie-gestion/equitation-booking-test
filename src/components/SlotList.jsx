@@ -95,6 +95,8 @@ export default function SlotList({ onSelectSlot }) {
           <div style={{ display: 'grid', gap: '1rem' }}>
             {stages.map(stage => {
               const complet = stage.places_remaining !== null && stage.places_remaining <= 0
+              const cloture = !!stage.date_limite_inscription && stage.date_limite_inscription < toLocalISODate(new Date())
+              const indisponible = complet || cloture
               const icone = stage.type === 'stage' ? '🏕️' : '📌'
               return (
                 <div key={stage.id} style={{
@@ -107,8 +109,8 @@ export default function SlotList({ onSelectSlot }) {
                   alignItems: 'center',
                   flexWrap: 'wrap',
                   gap: '1rem',
-                  borderLeft: `5px solid ${complet ? '#ddd' : COLORS.red}`,
-                  opacity: complet ? 0.6 : 1
+                  borderLeft: `5px solid ${indisponible ? '#ddd' : COLORS.red}`,
+                  opacity: indisponible ? 0.6 : 1
                 }}>
                   <div>
                     <h3 style={{ color: COLORS.navy, margin: '0 0 0.4rem 0', fontSize: '1rem' }}>{icone} {stage.title}</h3>
@@ -116,35 +118,40 @@ export default function SlotList({ onSelectSlot }) {
                       📅 Du {new Date(stage.date_start + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au {new Date(stage.date_end + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                     </p>
                     {stage.description && <p style={{ margin: '0.2rem 0', color: COLORS.textLight, fontSize: '0.85rem' }}>{stage.description}</p>}
+                    {!cloture && stage.date_limite_inscription && (
+                      <p style={{ margin: '0.2rem 0', color: '#a86a1a', fontSize: '0.82rem' }}>
+                        ⏰ Inscriptions jusqu'au {new Date(stage.date_limite_inscription + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                      </p>
+                    )}
                     <span style={{
                       display: 'inline-block',
                       marginTop: '0.4rem',
-                      background: complet ? '#fdecea' : '#e8f4fd',
-                      color: complet ? '#721c24' : '#155724',
+                      background: indisponible ? '#fdecea' : '#e8f4fd',
+                      color: indisponible ? '#721c24' : '#155724',
                       padding: '0.2rem 0.8rem',
                       borderRadius: '50px',
                       fontSize: '0.8rem',
                       fontWeight: 'bold'
                     }}>
-                      {stage.places_remaining === null ? '✅ Places illimitées' : complet ? '❌ Complet' : `✅ ${stage.places_remaining} place(s) disponible(s)`}
+                      {cloture ? '⏰ Inscriptions clôturées' : stage.places_remaining === null ? '✅ Places illimitées' : complet ? '❌ Complet' : `✅ ${stage.places_remaining} place(s) disponible(s)`}
                     </span>
                   </div>
                   <button
-                    disabled={complet}
+                    disabled={indisponible}
                     onClick={() => onSelectSlot(stage)}
                     style={{
-                      background: complet ? '#ccc' : COLORS.navy,
+                      background: indisponible ? '#ccc' : COLORS.navy,
                       color: 'white',
                       border: 'none',
                       padding: '0.8rem 1.5rem',
                       borderRadius: '50px',
-                      cursor: complet ? 'not-allowed' : 'pointer',
+                      cursor: indisponible ? 'not-allowed' : 'pointer',
                       fontSize: '0.95rem',
                       fontWeight: 'bold',
                       whiteSpace: 'nowrap',
-                      boxShadow: complet ? 'none' : '0 4px 12px rgba(26,39,68,0.2)'
+                      boxShadow: indisponible ? 'none' : '0 4px 12px rgba(26,39,68,0.2)'
                     }}>
-                    {complet ? 'Complet' : "M'inscrire →"}
+                    {cloture ? 'Clôturé' : complet ? 'Complet' : "M'inscrire →"}
                   </button>
                 </div>
               )
