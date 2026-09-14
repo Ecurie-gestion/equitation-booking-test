@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS } from '../../lib/theme'
 import { toLocalISODate } from '../../lib/dates'
@@ -135,6 +135,7 @@ export default function MesCours() {
   const [packsEpuises, setPacksEpuises] = useState([])
   const [noteEdit, setNoteEdit] = useState(null)
   const [noteValue, setNoteValue] = useState('')
+  const messageRef = useRef(null)
 
   useEffect(() => {
     fetchTout()
@@ -142,6 +143,32 @@ export default function MesCours() {
     fetchChevaux()
     fetchPacksEpuises()
   }, [])
+
+  // Le message (succès/erreur) s'affiche en haut de la page : sur téléphone,
+  // si on est en train de regarder un cours plus bas dans la liste, on ne le
+  // verrait jamais sans ce scroll automatique — et une action qui échoue en
+  // silence a l'air de "ne rien faire".
+  useEffect(() => {
+    if (message && messageRef.current) {
+      messageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [message])
+
+  // Une erreur "session expirée" (jeton d'authentification invalide/périmé)
+  // est la cause la plus probable d'une action qui ne fait plus rien sur
+  // l'espace moniteur après un long moment sans y toucher (ex: sur mobile).
+  function estErreurSession(error) {
+    const msg = `${error?.message || ''} ${error?.code || ''}`.toLowerCase()
+    return msg.includes('jwt') || msg.includes('401') || msg.includes('permission') || msg.includes('policy') || error?.code === 'PGRST301'
+  }
+
+  function afficherErreur(error) {
+    if (estErreurSession(error)) {
+      setMessage({ type: 'error', text: '⚠️ Ta session a expiré. Déconnecte-toi (lien en haut de page) puis reconnecte-toi, et réessaie.' })
+    } else {
+      setMessage({ type: 'error', text: `Une erreur est survenue (${error?.message || 'inconnue'}). Réessaie.` })
+    }
+  }
 
   async function fetchPacksEpuises() {
     const { data } = await supabase
@@ -275,7 +302,8 @@ export default function MesCours() {
   async function marquerPresence(item, rider, present) {
     const table = item.kind === 'fixe' ? 'presences' : 'bookings'
     const ancienPresent = rider.present
-    await supabase.from(table).update({ present }).eq('id', rider.rowId)
+    const { error } = await supabase.from(table).update({ present }).eq('id', rider.rowId)
+    if (error) { afficherErreur(error); return }
 
     // Pack de 10 leçons : une présence consomme une leçon, une absence ne consomme rien
     // (et on rend la leçon si on annule une présence déjà pointée).
@@ -321,14 +349,16 @@ export default function MesCours() {
         return
       }
     }
-    await supabase.from(table).update({ cheval_id: chevalId || null }).eq('id', rider.rowId)
+    const { error } = await supabase.from(table).update({ cheval_id: chevalId || null }).eq('id', rider.rowId)
+    if (error) { afficherErreur(error); return }
     rafraichirUnCours(item)
   }
 
   async function enregistrerNote(item) {
     const table = item.kind === 'fixe' ? 'seances' : 'slots'
     const note = noteValue.trim() || null
-    await supabase.from(table).update({ note }).eq('id', item.rawId)
+    const { error } = await supabase.from(table).update({ note }).eq('id', item.rawId)
+    if (error) { afficherErreur(error); return }
     setCours(prev => prev.map(c => c.id === item.id ? { ...c, note: note || '' } : c))
     setNoteEdit(null)
   }
@@ -336,7 +366,8 @@ export default function MesCours() {
   async function retirer(item, rider) {
     if (!confirm(`Retirer ${rider.nom} de ce cours ?`)) return
     const table = item.kind === 'fixe' ? 'presences' : 'bookings'
-    await supabase.from(table).delete().eq('id', rider.rowId)
+    const { error } = await supabase.from(table).delete().eq('id', rider.rowId)
+    if (error) { afficherErreur(error); return }
     rafraichirUnCours(item)
   }
 
@@ -347,11 +378,19 @@ export default function MesCours() {
     }
     if (item.kind === 'fixe') {
       const { error } = await supabase.from('presences').insert({ seance_id: item.rawId, cavalier_id: ajoutId, present: true })
-      if (error) { setMessage({ type: 'error', text: 'Cet élève est déjà dans ce cours.' }); return }
+      if (error) {
+        if (estErreurSession(error)) afficherErreur(error)
+        else setMessage({ type: 'error', text: 'Cet élève est déjà dans ce cours.' })
+        return
+      }
     } else {
       const cavalier = cavaliers.find(c => c.id === ajoutId)
       const { error } = await supabase.from('bookings').insert({ slot_id: item.rawId, child_name: cavalier?.prenom || '', child_nom: cavalier?.nom || '', parent_name: cavalier?.parent_nom || '', email: cavalier?.email || '', phone: cavalier?.telephone || '', present: true })
-      if (error) { setMessage({ type: 'error', text: "Erreur lors de l'ajout." }); return }
+      if (error) {
+        if (estErreurSession(error)) afficherErreur(error)
+        else setMessage({ type: 'error', text: "Erreur lors de l'ajout." })
+        return
+      }
     }
     setAjoutId('')
     setAjoutOuvert(null)
@@ -393,7 +432,7 @@ export default function MesCours() {
       </p>
 
       {message && (
-        <div style={{ background: message.type === 'success' ? '#d4edda' : '#f8d7da', color: message.type === 'success' ? '#155724' : '#721c24', padding: '0.6rem 1rem', borderRadius: '8px', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+        <div ref={messageRef} style={{ background: message.type === 'success' ? '#d4edda' : '#f8d7da', color: message.type === 'success' ? '#155724' : '#721c24', padding: '0.6rem 1rem', borderRadius: '8px', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.9rem' }}>{message.text}</span>
           <button onClick={() => setMessage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
         </div>
