@@ -7,6 +7,9 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
   const [form, setForm] = useState({
     parent_name: '', child_name: '', child_nom: '', email: '', phone: ''
   })
+  // null = pas encore répondu (volontairement, pour ne jamais présélectionner
+  // "j'accepte" par défaut) — true/false = réponse de la famille.
+  const [droitImage, setDroitImage] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -58,11 +61,17 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
       return
     }
 
+    if (droitImage === null) {
+      setError('Merci de répondre à la question sur le droit à l\'image ci-dessous avant de valider.')
+      setLoading(false)
+      return
+    }
+
     const cavalierId = await upsertCavalierDepuisReservation(form)
 
     const { error: insertError } = await supabase
       .from('event_inscriptions')
-      .insert({ ...form, event_id: stage.id, cavalier_id: cavalierId })
+      .insert({ ...form, event_id: stage.id, cavalier_id: cavalierId, droit_image: droitImage })
 
     if (insertError) {
       setError('Une erreur est survenue. Veuillez réessayer.')
@@ -158,6 +167,29 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
             onChange={handleChange}
             style={{ width: '100%', padding: '0.7rem', borderRadius: '6px', border: '1px solid #ddd', fontSize: '1rem', boxSizing: 'border-box' }}
           />
+        </div>
+
+        <div style={{ background: '#f5f0e8', borderRadius: '10px', padding: '1rem', border: droitImage === null ? '1px solid #ddd' : '1px solid transparent' }}>
+          <p style={{ margin: '0 0 0.6rem 0', color: '#1a2744', fontWeight: 'bold', fontSize: '0.9rem' }}>
+            📷 Droit à l'image *
+          </p>
+          <p style={{ margin: '0 0 0.7rem 0', color: '#555', fontSize: '0.85rem', lineHeight: '1.5' }}>
+            Des photos et vidéos peuvent être prises pendant le stage. Acceptez-vous que votre enfant y apparaisse,
+            et que l'Écurie de Groynne les utilise pour sa communication (site web, réseaux sociaux, supports
+            imprimés) ? Vous pouvez changer d'avis à tout moment en nous contactant.
+          </p>
+          <div style={{ display: 'flex', gap: '1.2rem', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.9rem', color: '#1a2744' }}>
+              <input type="radio" name="droit_image" checked={droitImage === true} onChange={() => setDroitImage(true)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+              ✅ J'accepte
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.9rem', color: '#1a2744' }}>
+              <input type="radio" name="droit_image" checked={droitImage === false} onChange={() => setDroitImage(false)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+              ❌ Je n'accepte pas
+            </label>
+          </div>
         </div>
 
         <p style={{ color: '#888', fontSize: '0.78rem', lineHeight: '1.6', margin: '0.3rem 0' }}>
