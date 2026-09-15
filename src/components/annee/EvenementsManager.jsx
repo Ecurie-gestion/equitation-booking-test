@@ -7,6 +7,15 @@ import EleveSelector from '../admin/EleveSelector'
 const EMPTY_EVENT = { title: '', type: 'stage', date_start: '', date_end: '', description: '', capacite_max: '', inscriptible: false, date_limite_inscription: '' }
 const EMPTY_INSCRIT = { parent_name: '', child_name: '', child_nom: '', email: '', phone: '' }
 
+// Affiche la réponse "droit à l'image" d'un inscrit : ✅ accepté, ❌ refusé,
+// ou "?" si pas encore répondu (inscription ajoutée manuellement, ou faite
+// avant l'ajout de cette question).
+function DroitImageBadge({ valeur }) {
+  if (valeur === true) return <span title="Autorise l'utilisation de photos/vidéos" style={{ color: '#155724' }}>✅</span>
+  if (valeur === false) return <span title="N'autorise PAS l'utilisation de photos/vidéos" style={{ color: '#721c24', fontWeight: 'bold' }}>❌</span>
+  return <span title="Pas encore répondu" style={{ color: '#aaa' }}>?</span>
+}
+
 export default function EvenementsManager() {
   const [events, setEvents] = useState([])
   const [showForm, setShowForm] = useState(false)
@@ -19,6 +28,7 @@ export default function EvenementsManager() {
   const [inscriptionsParEvent, setInscriptionsParEvent] = useState({})
   const [ajoutOuvert, setAjoutOuvert] = useState(false)
   const [nouvelInscrit, setNouvelInscrit] = useState(EMPTY_INSCRIT)
+  const [droitImageAjout, setDroitImageAjout] = useState(null)
 
   useEffect(() => { fetchEvents(); fetchCavaliers() }, [])
 
@@ -64,6 +74,7 @@ export default function EvenementsManager() {
       setOuvertInscriptions(eventId)
       setAjoutOuvert(false)
       setNouvelInscrit(EMPTY_INSCRIT)
+      setDroitImageAjout(null)
       fetchInscriptions(eventId)
     }
   }
@@ -74,9 +85,10 @@ export default function EvenementsManager() {
       return
     }
     const cavalierId = await upsertCavalierDepuisReservation(nouvelInscrit)
-    const { error } = await supabase.from('event_inscriptions').insert({ ...nouvelInscrit, event_id: eventId, cavalier_id: cavalierId })
+    const { error } = await supabase.from('event_inscriptions').insert({ ...nouvelInscrit, event_id: eventId, cavalier_id: cavalierId, droit_image: droitImageAjout })
     if (!error) {
       setNouvelInscrit(EMPTY_INSCRIT)
+      setDroitImageAjout(null)
       setAjoutOuvert(false)
       fetchInscriptions(eventId)
     } else {
@@ -255,6 +267,7 @@ export default function EvenementsManager() {
                         <th style={{ padding: '0.4rem', textAlign: 'left' }}>Enfant</th>
                         <th style={{ padding: '0.4rem', textAlign: 'left' }}>Email</th>
                         <th style={{ padding: '0.4rem', textAlign: 'left' }}>Tél.</th>
+                        <th style={{ padding: '0.4rem', textAlign: 'center' }} title="Droit à l'image">📷</th>
                         <th style={{ padding: '0.4rem', textAlign: 'center' }}>❌</th>
                       </tr>
                     </thead>
@@ -265,6 +278,7 @@ export default function EvenementsManager() {
                           <td style={{ padding: '0.4rem' }}>{i.child_name} {i.child_nom}</td>
                           <td style={{ padding: '0.4rem' }}>{i.email ? <a href={`mailto:${i.email}`} style={{ color: COLORS.sky }}>{i.email}</a> : '—'}</td>
                           <td style={{ padding: '0.4rem' }}>{i.phone || '—'}</td>
+                          <td style={{ padding: '0.4rem', textAlign: 'center' }}><DroitImageBadge valeur={i.droit_image} /></td>
                           <td style={{ padding: '0.4rem', textAlign: 'center' }}>
                             <button onClick={() => supprimerInscrit(i.id, event.id)} style={{ background: COLORS.red, color: 'white', border: 'none', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>🗑️</button>
                           </td>
@@ -279,9 +293,21 @@ export default function EvenementsManager() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.4rem', marginBottom: '0.5rem' }}>
                       <EleveSelector cavaliers={cavaliers} value={nouvelInscrit} onChange={setNouvelInscrit} />
                     </div>
+                    <div style={{ marginBottom: '0.6rem' }}>
+                      <span style={{ fontSize: '0.82rem', color: COLORS.navy, fontWeight: 'bold', marginRight: '0.8rem' }}>📷 Droit à l'image :</span>
+                      <label style={{ marginRight: '1rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                        <input type="radio" name="droit_image_ajout" checked={droitImageAjout === true} onChange={() => setDroitImageAjout(true)} /> ✅ Accepté
+                      </label>
+                      <label style={{ marginRight: '1rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                        <input type="radio" name="droit_image_ajout" checked={droitImageAjout === false} onChange={() => setDroitImageAjout(false)} /> ❌ Refusé
+                      </label>
+                      <label style={{ fontSize: '0.85rem', cursor: 'pointer' }}>
+                        <input type="radio" name="droit_image_ajout" checked={droitImageAjout === null} onChange={() => setDroitImageAjout(null)} /> Pas demandé
+                      </label>
+                    </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => ajouterInscrit(event.id)} style={{ background: COLORS.navy, color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Confirmer</button>
-                      <button onClick={() => { setAjoutOuvert(false); setNouvelInscrit(EMPTY_INSCRIT) }} style={{ background: '#ccc', border: 'none', padding: '0.5rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Annuler</button>
+                      <button onClick={() => { setAjoutOuvert(false); setNouvelInscrit(EMPTY_INSCRIT); setDroitImageAjout(null) }} style={{ background: '#ccc', border: 'none', padding: '0.5rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Annuler</button>
                     </div>
                   </div>
                 ) : (
