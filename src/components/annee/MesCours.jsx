@@ -218,17 +218,22 @@ export default function MesCours() {
     const seancesAvecRiders = await Promise.all((seancesData || []).map(async s => {
       const { data: abos } = await supabase
         .from('abonnements')
-        .select('*, cavaliers(prenom, nom)')
+        .select('*, cavaliers(prenom, nom, actif)')
         .eq('creneau_fixe_id', s.creneau_fixe_id)
         .eq('actif', true)
-      const attendus = (abos || []).filter(a => estAttendu(a, s.date))
+      // Un élève "mis sur pause" (cavaliers.actif = false) ne doit plus être
+      // attendu à ses cours tant qu'il n'est pas remis en route : on ne crée
+      // plus de nouvelle présence pour lui ci-dessous, et on le cache de
+      // l'affichage plus bas (ses présences déjà créées restent en base,
+      // inchangées, pour réapparaître automatiquement dès qu'il est réactivé).
+      const attendus = (abos || []).filter(a => estAttendu(a, s.date) && a.cavaliers?.actif !== false)
 
       const { data: existantes } = await supabase.from('presences').select('*').eq('seance_id', s.id)
       const existantIds = new Set((existantes || []).map(p => p.cavalier_id))
       const aCreer = attendus.filter(a => !existantIds.has(a.cavalier_id)).map(a => ({ seance_id: s.id, cavalier_id: a.cavalier_id, present: null }))
       if (aCreer.length > 0) await supabase.from('presences').insert(aCreer)
 
-      const { data: presencesFinales } = await supabase.from('presences').select('*, cavaliers(prenom, nom)').eq('seance_id', s.id)
+      const { data: presencesFinales } = await supabase.from('presences').select('*, cavaliers(prenom, nom, actif)').eq('seance_id', s.id)
 
       return {
         id: `fixe-${s.id}`,
@@ -240,10 +245,11 @@ export default function MesCours() {
         heureFin: s.creneaux_fixes?.heure_fin?.slice(0, 5) || '',
         label: s.creneaux_fixes?.niveaux || 'Cours fixe',
         note: s.note || '',
-        // On cache les présences "exclues" (élève retiré du cours par le moniteur) :
-        // la ligne reste en base (au lieu d'être supprimée) pour empêcher qu'elle
-        // ne soit recréée automatiquement au prochain chargement, voir plus bas.
-        riders: (presencesFinales || []).filter(p => !p.exclu).map(p => ({
+        // On cache les présences "exclues" (élève retiré du cours par le moniteur)
+        // et celles d'un élève actuellement en pause : la ligne reste en base
+        // (au lieu d'être supprimée) pour empêcher qu'elle ne soit recréée
+        // automatiquement au prochain chargement, voir plus bas.
+        riders: (presencesFinales || []).filter(p => !p.exclu && p.cavaliers?.actif !== false).map(p => ({
           rowId: p.id,
           cavalier_id: p.cavalier_id,
           nom: `${p.cavaliers?.prenom || ''} ${p.cavaliers?.nom || ''}`.trim(),
@@ -288,8 +294,8 @@ export default function MesCours() {
 
   async function rafraichirUnCours(item) {
     if (item.kind === 'fixe') {
-      const { data: presencesFinales } = await supabase.from('presences').select('*, cavaliers(prenom, nom)').eq('seance_id', item.rawId)
-      const riders = (presencesFinales || []).filter(p => !p.exclu).map(p => ({
+      const { data: presencesFinales } = await supabase.from('presences').select('*, cavaliers(prenom, nom, actif)').eq('seance_id', item.rawId)
+      const riders = (presencesFinales || []).filter(p => !p.exclu && p.cavaliers?.actif !== false).map(p => ({
         rowId: p.id, cavalier_id: p.cavalier_id, nom: `${p.cavaliers?.prenom || ''} ${p.cavaliers?.nom || ''}`.trim(), cheval_id: p.cheval_id, present: p.present
       }))
       setCours(prev => prev.map(c => c.id === item.id ? { ...c, riders } : c))
