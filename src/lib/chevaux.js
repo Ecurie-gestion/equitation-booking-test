@@ -30,12 +30,13 @@ export async function chevalDejaAssigne({ date, heureDebut, heureFin, chevalId, 
   if (seancesChevauchantes.length > 0) {
     const { data: presences } = await supabase
       .from('presences')
-      .select('id, cheval_id, seance_id, exclu, cavaliers(prenom, nom)')
+      .select('id, cheval_id, seance_id, exclu, cavaliers(prenom, nom, actif)')
       .in('seance_id', seancesChevauchantes.map(s => s.id))
       .eq('cheval_id', chevalId)
-    // Un élève retiré du cours ("exclu") ne compte plus comme utilisant le
-    // cheval, même si la ligne (et son cheval_id) existe encore en base.
-    const conflit = (presences || []).filter(p => !p.exclu).find(p => !(excluerTable === 'presences' && p.id === excluerId))
+    // Un élève retiré du cours ("exclu") ou en pause ne compte plus comme
+    // utilisant le cheval, même si la ligne (et son cheval_id) existe encore
+    // en base.
+    const conflit = (presences || []).filter(p => !p.exclu && p.cavaliers?.actif !== false).find(p => !(excluerTable === 'presences' && p.id === excluerId))
     if (conflit) {
       const seance = seancesChevauchantes.find(s => s.id === conflit.seance_id)
       return {
