@@ -52,7 +52,7 @@ async function fetchJour(dateStr) {
       label: s.creneaux_fixes?.niveaux || '',
       kind: 'fixe',
       note: s.note,
-      rows: s.presences.map(p => ({ id: p.id, cavalier: p.cavaliers?.prenom, cheval: p.chevaux?.nom, chevalNote: p.chevaux?.note })),
+      rows: s.presences.filter(p => !p.exclu).map(p => ({ id: p.id, cavalier: p.cavaliers?.prenom, cheval: p.chevaux?.nom, chevalNote: p.chevaux?.note })),
       messageVide: 'Liste des cavaliers pas encore disponible.'
     })),
     ...avecBookings.map(s => ({

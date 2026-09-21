@@ -257,7 +257,7 @@ export default function MyBookings({ onBack }) {
         .eq('cavalier_id', cavalier.id)
 
       coursFixesPasses = (presencesPassees || [])
-        .filter(p => p.seances?.date && p.seances.date < today)
+        .filter(p => p.seances?.date && p.seances.date < today && !p.exclu)
         .map(p => ({
           id: `presence-${p.id}`,
           date: p.seances.date,
