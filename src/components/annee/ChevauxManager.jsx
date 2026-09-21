@@ -159,14 +159,16 @@ export default function ChevauxManager() {
     // Cours fixes : on additionne les cours où le cheval a été présent
     const { data: seancesData } = await supabase
       .from('seances')
-      .select('date, annulee, creneaux_fixes(heure_debut, heure_fin), presences(cheval_id, present)')
+      .select('date, annulee, creneaux_fixes(heure_debut, heure_fin), presences(cheval_id, present, exclu)')
       .gte('date', debut)
       .lte('date', fin)
       .eq('annulee', false)
 
     ;(seancesData || []).forEach(s => {
       const duree = dureeHeures(s.creneaux_fixes?.heure_debut, s.creneaux_fixes?.heure_fin)
-      ;(s.presences || []).forEach(p => { if (p.present) ajouter(p.cheval_id, duree) })
+      // Un élève retiré du cours (présence "exclue") ne doit pas compter dans
+      // les heures du cheval, même si elle avait été pointée présente avant.
+      ;(s.presences || []).forEach(p => { if (p.present && !p.exclu) ajouter(p.cheval_id, duree) })
     })
 
     // Créneaux libres : même logique

@@ -240,7 +240,10 @@ export default function MesCours() {
         heureFin: s.creneaux_fixes?.heure_fin?.slice(0, 5) || '',
         label: s.creneaux_fixes?.niveaux || 'Cours fixe',
         note: s.note || '',
-        riders: (presencesFinales || []).map(p => ({
+        // On cache les présences "exclues" (élève retiré du cours par le moniteur) :
+        // la ligne reste en base (au lieu d'être supprimée) pour empêcher qu'elle
+        // ne soit recréée automatiquement au prochain chargement, voir plus bas.
+        riders: (presencesFinales || []).filter(p => !p.exclu).map(p => ({
           rowId: p.id,
           cavalier_id: p.cavalier_id,
           nom: `${p.cavaliers?.prenom || ''} ${p.cavaliers?.nom || ''}`.trim(),
@@ -286,7 +289,7 @@ export default function MesCours() {
   async function rafraichirUnCours(item) {
     if (item.kind === 'fixe') {
       const { data: presencesFinales } = await supabase.from('presences').select('*, cavaliers(prenom, nom)').eq('seance_id', item.rawId)
-      const riders = (presencesFinales || []).map(p => ({
+      const riders = (presencesFinales || []).filter(p => !p.exclu).map(p => ({
         rowId: p.id, cavalier_id: p.cavalier_id, nom: `${p.cavaliers?.prenom || ''} ${p.cavaliers?.nom || ''}`.trim(), cheval_id: p.cheval_id, present: p.present
       }))
       setCours(prev => prev.map(c => c.id === item.id ? { ...c, riders } : c))
@@ -365,9 +368,17 @@ export default function MesCours() {
 
   async function retirer(item, rider) {
     if (!confirm(`Retirer ${rider.nom} de ce cours ?`)) return
-    const table = item.kind === 'fixe' ? 'presences' : 'bookings'
-    const { error } = await supabase.from(table).delete().eq('id', rider.rowId)
-    if (error) { afficherErreur(error); return }
+    if (item.kind === 'fixe') {
+      // Pour un cours fixe, on ne supprime pas la ligne de présence : à chaque
+      // chargement de la page, elle serait recréée automatiquement pour tout
+      // élève ayant un abonnement actif sur ce créneau. On la marque "exclue"
+      // à la place, ce qui la cache de la liste sans qu'elle ne réapparaisse.
+      const { error } = await supabase.from('presences').update({ exclu: true }).eq('id', rider.rowId)
+      if (error) { afficherErreur(error); return }
+    } else {
+      const { error } = await supabase.from('bookings').delete().eq('id', rider.rowId)
+      if (error) { afficherErreur(error); return }
+    }
     rafraichirUnCours(item)
   }
 
@@ -377,11 +388,26 @@ export default function MesCours() {
       return
     }
     if (item.kind === 'fixe') {
-      const { error } = await supabase.from('presences').insert({ seance_id: item.rawId, cavalier_id: ajoutId, present: true })
-      if (error) {
-        if (estErreurSession(error)) afficherErreur(error)
-        else setMessage({ type: 'error', text: 'Cet élève est déjà dans ce cours.' })
-        return
+      // Si cet élève avait déjà une ligne de présence pour ce cours (par ex. il
+      // avait été retiré, voir retirer() ci-dessus), on la réactive au lieu d'en
+      // insérer une nouvelle : une seule ligne de présence par élève et par
+      // séance est autorisée en base.
+      const { data: existante } = await supabase
+        .from('presences')
+        .select('id')
+        .eq('seance_id', item.rawId)
+        .eq('cavalier_id', ajoutId)
+        .maybeSingle()
+      if (existante) {
+        const { error } = await supabase.from('presences').update({ exclu: false, present: true }).eq('id', existante.id)
+        if (error) { afficherErreur(error); return }
+      } else {
+        const { error } = await supabase.from('presences').insert({ seance_id: item.rawId, cavalier_id: ajoutId, present: true })
+        if (error) {
+          if (estErreurSession(error)) afficherErreur(error)
+          else setMessage({ type: 'error', text: 'Cet élève est déjà dans ce cours.' })
+          return
+        }
       }
     } else {
       const cavalier = cavaliers.find(c => c.id === ajoutId)

@@ -67,7 +67,7 @@ export default function CavaliersManager() {
     const stages = [...(stagesParId || []), ...(stagesParNom || [])]
 
     const lecons = [
-      ...(presencesFixe || []).map(p => ({
+      ...(presencesFixe || []).filter(p => !p.exclu).map(p => ({
         id: `p-${p.id}`,
         date: p.seances?.date,
         label: p.seances?.creneaux_fixes?.niveaux || 'Cours fixe',
