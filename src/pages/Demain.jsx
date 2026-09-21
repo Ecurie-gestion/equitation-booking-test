@@ -23,7 +23,7 @@ async function fetchJour(dateStr) {
   const avecPresences = await Promise.all((seancesData || []).map(async s => {
     const { data: presencesData } = await supabase
       .from('presences')
-      .select('*, cavaliers(prenom, nom), chevaux(nom, note)')
+      .select('*, cavaliers(prenom, nom, actif), chevaux(nom, note)')
       .eq('seance_id', s.id)
     return { ...s, presences: presencesData || [] }
   }))
@@ -52,7 +52,7 @@ async function fetchJour(dateStr) {
       label: s.creneaux_fixes?.niveaux || '',
       kind: 'fixe',
       note: s.note,
-      rows: s.presences.filter(p => !p.exclu).map(p => ({ id: p.id, cavalier: p.cavaliers?.prenom, cheval: p.chevaux?.nom, chevalNote: p.chevaux?.note })),
+      rows: s.presences.filter(p => !p.exclu && p.cavaliers?.actif !== false).map(p => ({ id: p.id, cavalier: p.cavaliers?.prenom, cheval: p.chevaux?.nom, chevalNote: p.chevaux?.note })),
       messageVide: 'Liste des cavaliers pas encore disponible.'
     })),
     ...avecBookings.map(s => ({
