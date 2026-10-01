@@ -53,3 +53,9 @@ export const SOIN_TYPES = [
   { value: 'dentiste', label: '🦷 Dentiste' },
   { value: 'autre', label: '📝 Autre soin' }
 ]
+
+export const SEXE_CHEVAL = [
+  { value: 'jument', label: 'Jument' },
+  { value: 'hongre', label: 'Hongre' },
+  { value: 'etalon', label: 'Étalon' }
+]
