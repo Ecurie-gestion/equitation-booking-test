@@ -3,6 +3,11 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Rappel automatique par email pour les stages/événements (2-3 jours avant).
+# 7h UTC = environ 8h-9h en Belgique selon l'heure d'été/hiver.
+[functions."send-rappels"]
+  schedule = "0 7 * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
