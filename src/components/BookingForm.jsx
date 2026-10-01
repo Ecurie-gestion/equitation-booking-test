@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { upsertCavalierDepuisReservation } from '../lib/cavaliers'
 import { toLocalISODate } from '../lib/dates'
+import { sendEmail } from '../lib/email'
 
 export default function BookingForm({ slot, onSuccess, onCancel }) {
   const [form, setForm] = useState({
@@ -58,6 +59,11 @@ export default function BookingForm({ slot, onSuccess, onCancel }) {
     if (insertError) {
       setError('Une erreur est survenue. Veuillez réessayer.')
     } else {
+      // Email de confirmation — on n'empêche pas l'inscription de réussir
+      // si l'envoi échoue (déjà géré en interne par sendEmail).
+      const dateTxt = new Date(slot.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+      sendEmail(form.email, 'Confirmation de votre inscription — Ecurie de Groynne',
+        `Bonjour,\n\nVotre inscription est bien confirmée pour ${slot.title}, le ${dateTxt} de ${slot.time_start.slice(0, 5)} à ${slot.time_end.slice(0, 5)}.\n\nEn cas de question, contactez François au 0478/60.56.89.\n\nÀ bientôt à l'Ecurie de Groynne !`)
       onSuccess()
     }
     setLoading(false)
