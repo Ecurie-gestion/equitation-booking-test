@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { supabase } from '../../lib/supabase'
 import { COLORS, NIVEAUX, TYPES_ABONNEMENT, JOURS_SEMAINE } from '../../lib/theme'
 import { toLocalISODate } from '../../lib/dates'
+import { exporterElevesCSV } from '../../lib/export'
 
 const EMPTY = { prenom: '', nom: '', parent_nom: '', email: '', telephone: '', niveau: '' }
 
@@ -12,6 +13,7 @@ export default function CavaliersManager() {
   const [editingId, setEditingId] = useState(null)
   const [showInactifs, setShowInactifs] = useState(false)
   const [message, setMessage] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   // Historique (abonnements + leçons prises)
   const [historiqueOuvert, setHistoriqueOuvert] = useState(null)
@@ -36,6 +38,16 @@ export default function CavaliersManager() {
     if (!showInactifs) query = query.eq('actif', true)
     const { data } = await query
     setCavaliers(data || [])
+  }
+
+  async function exporter() {
+    setExporting(true)
+    try {
+      await exporterElevesCSV(cavaliers)
+    } catch {
+      setMessage({ type: 'error', text: "Erreur lors de l'export." })
+    }
+    setExporting(false)
   }
 
   async function fetchHistorique(cavalier) {
@@ -198,6 +210,10 @@ export default function CavaliersManager() {
             <input type="checkbox" checked={showInactifs} onChange={e => setShowInactifs(e.target.checked)} />
             Afficher les inactifs
           </label>
+          <button onClick={exporter} disabled={exporting || cavaliers.length === 0} title="Export détaillé : un élève par cours fixe / créneau libre / stage suivi"
+            style={{ background: 'white', color: COLORS.navy, border: `1px solid ${COLORS.sky}`, padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            {exporting ? 'Export...' : '📥 Exporter CSV'}
+          </button>
           <button onClick={startAdd}
             style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold' }}>
             ➕ Ajouter un cavalier
