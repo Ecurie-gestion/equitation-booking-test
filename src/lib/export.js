@@ -52,8 +52,8 @@ export async function exporterElevesCSV(cavaliers) {
     // Anciennes réservations/inscriptions migrées sans cavalier_id : on
     // rattrape par nom exact, comme ailleurs dans l'admin.
     supabase.from('bookings').select('*, slots(title, date)').is('cavalier_id', null),
-    supabase.from('event_inscriptions').select('*, events(title, date_start)').in('cavalier_id', ids),
-    supabase.from('event_inscriptions').select('*, events(title, date_start)').is('cavalier_id', null)
+    supabase.from('event_inscriptions').select('*, events(title, date_start, type)').in('cavalier_id', ids),
+    supabase.from('event_inscriptions').select('*, events(title, date_start, type)').is('cavalier_id', null)
   ])
 
   const lignes = [['Prénom', 'Nom', 'Abonnement', 'Type', 'Cours / événement', 'Date', 'Statut']]
@@ -93,8 +93,9 @@ export async function exporterElevesCSV(cavaliers) {
     ]
     stagesCavalier.forEach(s => {
       lignesCavalier.push([
-        cav.prenom, cav.nom, abonnementLabel, 'Stage / événement',
-        s.events?.title || 'Stage/événement', s.events?.date_start || '', 'Inscrit(e)'
+        cav.prenom, cav.nom, abonnementLabel,
+        s.events?.type === 'concours' ? 'Concours' : s.events?.type === 'stage' ? 'Stage' : 'Événement',
+        s.events?.title || 'Stage/concours/événement', s.events?.date_start || '', 'Inscrit(e)'
       ])
     })
 
