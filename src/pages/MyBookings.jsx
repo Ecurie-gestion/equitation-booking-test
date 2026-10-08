@@ -138,7 +138,8 @@ export default function MyBookings({ onBack }) {
           heureDebut: null,
           heureFin: null,
           titre: prochainStage.events.title || (prochainStage.events.type === 'stage' ? 'Stage' : 'Événement'),
-          kind: 'stage'
+          kind: 'stage',
+          typeEvent: prochainStage.events.type
         })
       }
     }
@@ -282,7 +283,8 @@ export default function MyBookings({ onBack }) {
           heureDebut: null,
           heureFin: null,
           titre: s.events.title || (s.events.type === 'stage' ? 'Stage' : 'Événement'),
-          kind: 'stage'
+          kind: 'stage',
+          typeEvent: s.events.type
         }))
       stagesPasses = (stages || [])
         .filter(s => s.events?.date_start && s.events.date_start < today)
@@ -292,7 +294,8 @@ export default function MyBookings({ onBack }) {
           heureDebut: null,
           heureFin: null,
           titre: s.events.title || (s.events.type === 'stage' ? 'Stage' : 'Événement'),
-          kind: 'stage'
+          kind: 'stage',
+          typeEvent: s.events.type
         }))
 
       const [{ data: bookingsParId }, { data: bookingsParNom }] = await Promise.all([
@@ -334,7 +337,7 @@ export default function MyBookings({ onBack }) {
   }
 
   function CarteInscription({ item, passe }) {
-    const icone = item.kind === 'fixe' ? '🔒' : item.kind === 'stage' ? '🏕️' : '🌐'
+    const icone = item.kind === 'fixe' ? '🔒' : item.kind === 'stage' ? (item.typeEvent === 'concours' ? '🏆' : '🏕️') : '🌐'
     return (
       <div style={{
         background: passe ? '#f2f2f2' : 'white',
