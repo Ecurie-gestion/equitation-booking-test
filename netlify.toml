@@ -12,3 +12,8 @@
   from = "/*"
   to = "/index.html"
   status = 200
+# Type de fichier correct pour le manifest (icone/nom de l'appli sur mobile).
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
