@@ -117,7 +117,7 @@ export default function EvenementsManager() {
       const syncOk = await syncCalendarEvent(data.id, 'create')
       setMessage({
         type: 'success',
-        text: `${newEvent.type === 'stage' ? 'Stage' : 'Concours'} créé !${syncOk ? ' Ajouté à Google Agenda.' : ' (non synchronisé avec Google Agenda — vérifie la connexion du compte Google)'}`
+        text: `${newEvent.type === 'stage' ? 'Stage' : newEvent.type === 'concours' ? 'Concours' : 'Événement'} créé !${syncOk ? ' Ajouté à Google Agenda.' : ' (non synchronisé avec Google Agenda — vérifie la connexion du compte Google)'}`
       })
       setNewEvent(EMPTY_EVENT)
       setShowForm(false)
@@ -184,8 +184,7 @@ export default function EvenementsManager() {
             </div>
           </div>
 
-          {newEvent.type !== 'concours' && (
-            <div style={{ marginTop: '1rem', background: COLORS.skyLight, borderRadius: '10px', padding: '0.8rem 1rem' }}>
+          <div style={{ marginTop: '1rem', background: COLORS.skyLight, borderRadius: '10px', padding: '0.8rem 1rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontWeight: 'bold', color: COLORS.navy, fontSize: '0.9rem' }}>
                 <input type="checkbox" checked={newEvent.inscriptible} onChange={e => setNewEvent({ ...newEvent, inscriptible: e.target.checked })}
                   style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: COLORS.navy }} />
@@ -209,7 +208,6 @@ export default function EvenementsManager() {
                 </div>
               )}
             </div>
-          )}
           <button onClick={createEvent}
             style={{ marginTop: '1rem', background: COLORS.red, color: 'white', border: 'none', padding: '0.7rem 2rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
             Créer
@@ -238,7 +236,7 @@ export default function EvenementsManager() {
                   </p>
                 )}
                 {event.description && <p style={{ margin: '0.1rem 0', color: '#888', fontSize: '0.8rem' }}>{event.description}</p>}
-                {!estInscriptible && event.type !== 'concours' && (
+                {!estInscriptible && (
                   <p style={{ margin: '0.2rem 0 0 0', color: '#aaa', fontSize: '0.75rem', fontStyle: 'italic' }}>Inscription en ligne désactivée pour cet événement.</p>
                 )}
               </div>
@@ -258,7 +256,7 @@ export default function EvenementsManager() {
 
             {estInscriptible && ouvertInscriptions === event.id && (
               <div style={{ borderTop: `2px solid ${COLORS.skyLight}`, padding: '0.8rem 1rem' }}>
-                {inscrits.length === 0 && <p style={{ color: '#888', fontSize: '0.85rem' }}>Aucun inscrit pour ce stage.</p>}
+                {inscrits.length === 0 && <p style={{ color: '#888', fontSize: '0.85rem' }}>Aucun inscrit pour le moment.</p>}
                 {inscrits.length > 0 && (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '0.8rem' }}>
                     <thead>

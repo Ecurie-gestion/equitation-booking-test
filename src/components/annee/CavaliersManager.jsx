@@ -101,7 +101,8 @@ export default function CavaliersManager() {
         label: s.events?.title || (s.events?.type === 'stage' ? 'Stage' : 'Événement'),
         heure: null,
         present: null,
-        kind: 'stage'
+        kind: 'stage',
+        typeEvent: s.events?.type
       }))
     ]
       .filter(l => l.date)
@@ -373,7 +374,7 @@ export default function CavaliersManager() {
                               <span style={{ color: COLORS.navy, fontWeight: 'bold' }}>{new Date(l.date + 'T12:00:00').toLocaleDateString('fr-FR')}</span>
                               <span style={{ color: '#888' }}>{l.heure}</span>
                               <span style={{ color: '#555' }}>{l.label}</span>
-                              <span style={{ color: '#aaa' }}>{l.kind === 'fixe' ? '🔒 fixe' : l.kind === 'stage' ? '🏕️ stage' : '🌐 libre'}</span>
+                              <span style={{ color: '#aaa' }}>{l.kind === 'fixe' ? '🔒 fixe' : l.kind === 'stage' ? (l.typeEvent === 'concours' ? '🏆 concours' : '🏕️ stage') : '🌐 libre'}</span>
                               {l.present === true && <span style={{ color: COLORS.green, fontWeight: 'bold' }}>✓ présent</span>}
                               {l.present === false && <span style={{ color: COLORS.red, fontWeight: 'bold' }}>✕ absent</span>}
                               {l.present === null && <span style={{ color: '#ccc' }}>—</span>}
