@@ -43,7 +43,7 @@ export default function SlotList({ onSelectSlot }) {
     setLoading(false)
   }
 
-  // "stages" ici désigne tout événement (stage OU événement libre) pour lequel
+  // "stages" ici désigne tout événement (stage, concours OU événement libre) pour lequel
   // le moniteur a activé l'inscription en ligne.
   async function fetchStages() {
     const today = toLocalISODate(new Date())
@@ -91,13 +91,13 @@ export default function SlotList({ onSelectSlot }) {
     <div>
       {stages.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
-          <h3 style={{ color: COLORS.navy, fontSize: '1.05rem', marginBottom: '0.8rem' }}>🏕️ Stages & événements</h3>
+          <h3 style={{ color: COLORS.navy, fontSize: '1.05rem', marginBottom: '0.8rem' }}>🏕️ Stages, concours & événements</h3>
           <div style={{ display: 'grid', gap: '1rem' }}>
             {stages.map(stage => {
               const complet = stage.places_remaining !== null && stage.places_remaining <= 0
               const cloture = !!stage.date_limite_inscription && stage.date_limite_inscription < toLocalISODate(new Date())
               const indisponible = complet || cloture
-              const icone = stage.type === 'stage' ? '🏕️' : '📌'
+              const icone = stage.type === 'stage' ? '🏕️' : stage.type === 'concours' ? '🏆' : '📌'
               return (
                 <div key={stage.id} style={{
                   background: 'white',

@@ -273,6 +273,18 @@ export default function Calendar({ onSelectSlot }) {
                     Du {new Date(e.date_start + 'T12:00:00').toLocaleDateString('fr-FR')} au {new Date(e.date_end + 'T12:00:00').toLocaleDateString('fr-FR')}
                   </p>
                   {e.description && <p style={{ margin: '0.2rem 0', color: '#555', fontSize: '0.85rem' }}>{e.description}</p>}
+                  {e.inscriptible && e.places_remaining !== null && (
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.85rem', fontWeight: 'bold', color: e.places_remaining > 0 ? '#2ecc71' : '#e74c3c' }}>
+                      {e.places_remaining > 0 ? `✅ ${e.places_remaining} place(s) disponible(s)` : '❌ Complet'}
+                    </p>
+                  )}
+                  {e.inscriptible && (e.places_remaining === null || e.places_remaining > 0) && e.date_end >= today
+                    && !(e.date_limite_inscription && e.date_limite_inscription < today) && (
+                    <button onClick={() => onSelectSlot({ ...e, kind: 'evenement' })}
+                      style={{ background: COLORS.concours, color: 'white', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.3rem' }}>
+                      M'inscrire
+                    </button>
+                  )}
                 </>
               )}
               {e.type === 'libre' && (

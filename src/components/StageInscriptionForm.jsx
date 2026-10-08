@@ -4,6 +4,8 @@ import { upsertCavalierDepuisReservation } from '../lib/cavaliers'
 import { toLocalISODate } from '../lib/dates'
 
 export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
+  // Vocabulaire adapté au type d'événement (stage / concours / événement libre).
+  const nom = stage.type === 'stage' ? 'ce stage' : stage.type === 'concours' ? 'ce concours' : 'cet événement'
   const [form, setForm] = useState({
     parent_name: '', child_name: '', child_nom: '', email: '', phone: ''
   })
@@ -42,7 +44,7 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
         .select('id', { count: 'exact', head: true })
         .eq('event_id', stage.id)
       if ((count || 0) >= stage.capacite_max) {
-        setError('Désolé, ce stage vient d\'être complet.')
+        setError(`Désolé, ${nom} vient d'être complet.`)
         setLoading(false)
         return
       }
@@ -56,7 +58,7 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
       .eq('child_nom', form.child_nom)
 
     if (existing && existing.length > 0) {
-      setError(`${form.child_name} est déjà inscrit(e) à ce stage !`)
+      setError(`${form.child_name} est déjà inscrit(e) à ${nom} !`)
       setLoading(false)
       return
     }
@@ -90,7 +92,7 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
     }}>
       <h3 style={{ color: '#1a2744', marginBottom: '0.3rem' }}>Inscription</h3>
       <p style={{ color: '#555', marginBottom: '1.5rem' }}>
-        {stage.type === 'stage' ? '🏕️' : '📌'} {stage.title} — du {new Date(stage.date_start + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au {new Date(stage.date_end + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+        {stage.type === 'stage' ? '🏕️' : stage.type === 'concours' ? '🏆' : '📌'} {stage.title} — du {new Date(stage.date_start + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} au {new Date(stage.date_end + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
       </p>
 
       {error && (
@@ -174,7 +176,7 @@ export default function StageInscriptionForm({ stage, onSuccess, onCancel }) {
             📷 Droit à l'image *
           </p>
           <p style={{ margin: '0 0 0.7rem 0', color: '#555', fontSize: '0.85rem', lineHeight: '1.5' }}>
-            Des photos et vidéos peuvent être prises pendant le stage. Acceptez-vous que votre enfant y apparaisse,
+            Des photos et vidéos peuvent être prises pendant {stage.type === 'stage' ? 'le stage' : stage.type === 'concours' ? 'le concours' : 'l\'événement'}. Acceptez-vous que votre enfant y apparaisse,
             et que l'Écurie de Groynne les utilise pour sa communication (site web, réseaux sociaux, supports
             imprimés) ? Vous pouvez changer d'avis à tout moment en nous contactant.
           </p>
