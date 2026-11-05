@@ -154,6 +154,7 @@ export default function Calendar({ onSelectSlot }) {
 
           return (
             <div key={i}
+              className={day ? 'edg-cal-cell' : 'edg-cal-cell edg-cal-empty'}
               onClick={() => day && setSelectedDate(day === selectedDate ? null : day)}
               style={{
                 minHeight: '52px',
@@ -168,7 +169,7 @@ export default function Calendar({ onSelectSlot }) {
               }}>
               {day && (
                 <>
-                  <span style={{
+                  <span className="edg-cal-day" style={{
                     fontSize: '0.82rem',
                     color: COLORS.navy,
                     fontWeight: isToday ? 'bold' : 'normal',
@@ -180,12 +181,14 @@ export default function Calendar({ onSelectSlot }) {
                   {/* Bandeaux colorés */}
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2px', padding: '0 2px 3px 2px' }}>
                     {dayEvents.map((e, idx) => (
-                      <div key={idx} style={{
+                      <div key={idx} className="edg-cal-bar" data-type={e.type} style={{
                         width: '100%',
                         height: '7px',
                         borderRadius: '3px',
                         background: COLORS[e.type]
-                      }} />
+                      }}>
+                        <span className="edg-cal-label">{e.time_start ? `${e.time_start.slice(0, 5)} ` : ''}{e.title}</span>
+                      </div>
                     ))}
                   </div>
                 </>

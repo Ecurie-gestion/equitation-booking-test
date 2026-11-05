@@ -92,7 +92,7 @@ export default function SlotList({ onSelectSlot }) {
       {stages.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
           <h3 style={{ color: COLORS.navy, fontSize: '1.05rem', marginBottom: '0.8rem' }}>🏕️ Stages, concours & événements</h3>
-          <div style={{ display: 'grid', gap: '1rem' }}>
+          <div className="edg-grid-2" style={{ display: 'grid', gap: '1rem' }}>
             {stages.map(stage => {
               const complet = stage.places_remaining !== null && stage.places_remaining <= 0
               const cloture = !!stage.date_limite_inscription && stage.date_limite_inscription < toLocalISODate(new Date())
@@ -193,7 +193,7 @@ export default function SlotList({ onSelectSlot }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gap: '1rem' }}>
+      <div className="edg-grid-2" style={{ display: 'grid', gap: '1rem' }}>
         {slotsFiltres.map(slot => (
           <div key={slot.id} style={{
             background: 'white',
