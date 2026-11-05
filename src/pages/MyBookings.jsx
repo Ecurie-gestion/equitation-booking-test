@@ -372,7 +372,7 @@ export default function MyBookings({ onBack }) {
 
   return (
     <div style={{ fontFamily: 'Georgia, serif', background: COLORS.beigeLight, minHeight: '100vh' }}>
-      <header style={{
+      <header className="edg-header" style={{
         background: COLORS.navy,
         padding: '1rem 2rem',
         display: 'flex',
@@ -387,7 +387,7 @@ export default function MyBookings({ onBack }) {
         </button>
       </header>
 
-      <main style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <main className="edg-mid" style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
         <h1 style={{ color: COLORS.navy, fontSize: '1.8rem', marginBottom: '0.5rem' }}>📋 Mes inscriptions</h1>
         <p style={{ color: COLORS.textLight, marginBottom: '2rem' }}>
           Entrez le prénom et le nom de l'élève pour connaître sa prochaine séance.

@@ -42,10 +42,10 @@ export default function Home() {
   if (showInscriptionFixe) {
     return (
       <div style={{ fontFamily: "'Georgia', serif", background: COLORS.beigeLight, minHeight: '100vh' }}>
-        <header style={{ background: COLORS.navy, padding: '0.9rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
+        <header className="edg-header" style={{ background: COLORS.navy, padding: '0.9rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
           <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '48px' }} />
         </header>
-        <main style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
+        <main className="edg-mid" style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
           <InscriptionCoursFixe onBack={() => setShowInscriptionFixe(false)} />
         </main>
       </div>
@@ -55,7 +55,7 @@ export default function Home() {
   return (
     <div style={{ fontFamily: "'Georgia', serif", background: COLORS.beigeLight, minHeight: '100vh' }}>
 
-      <header style={{
+      <header className="edg-header" style={{
         background: COLORS.navy,
         padding: '0.9rem 1.5rem',
         display: 'flex',
@@ -112,10 +112,10 @@ export default function Home() {
         </div>
       )}
 
-      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <main className="edg-wide" style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1rem' }}>
 
         {confirmed ? (
-          <div style={{ background: 'white', borderRadius: '20px', padding: '3rem 2rem', boxShadow: '0 8px 40px rgba(26,39,68,0.1)', textAlign: 'center', marginTop: '2rem' }}>
+          <div className="edg-form" style={{ background: 'white', borderRadius: '20px', padding: '3rem 2rem', boxShadow: '0 8px 40px rgba(26,39,68,0.1)', textAlign: 'center', marginTop: '2rem' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
             <h2 style={{ color: COLORS.navy, marginBottom: '1rem', fontSize: '1.8rem' }}>Inscription confirmée !</h2>
             <p style={{ color: COLORS.textLight, marginBottom: '2rem', fontSize: '1.05rem', lineHeight: '1.8' }}>
@@ -128,7 +128,7 @@ export default function Home() {
           </div>
 
         ) : selectedSlot ? (
-          <div>
+          <div className="edg-form">
             <button onClick={() => setSelectedSlot(null)}
               style={{ background: 'none', border: 'none', color: COLORS.navy, cursor: 'pointer', fontSize: '0.95rem', marginBottom: '1rem' }}>
               ← Retour aux créneaux
@@ -182,7 +182,7 @@ export default function Home() {
       </main>
 
       <footer style={{ background: COLORS.navy, color: 'white', padding: '3rem 2rem', marginTop: '3rem' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
+        <div className="edg-footer-in" style={{ maxWidth: '900px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
           <div>
             <img src="/logo-white.png" alt="Ecurie de Groynne" style={{ height: '50px', marginBottom: '1rem' }} />
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: '1.8' }}>
@@ -199,7 +199,7 @@ export default function Home() {
             </p>
           </div>
         </div>
-        <div style={{ maxWidth: '900px', margin: '2rem auto 0 auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', textAlign: 'center' }}>
+        <div className="edg-footer-in" style={{ maxWidth: '900px', margin: '2rem auto 0 auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', textAlign: 'center' }}>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: '0 0 0.6rem 0' }}>
             © 2026 Ecurie de Groynne — Tous droits réservés — Avec ❤️ par l'équipe Ecurie de Groynne
           </p>

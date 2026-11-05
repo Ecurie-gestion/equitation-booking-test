@@ -162,18 +162,18 @@ export default function Demain({ onBack }) {
 
   return (
     <div style={{ fontFamily: "'Georgia', serif", background: COLORS.beigeLight, minHeight: '100vh' }}>
-      <header style={{ background: COLORS.navy, padding: '0.8rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+      <header className="edg-header" style={{ background: COLORS.navy, padding: '0.8rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
         <button onClick={onBack}
           style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: 'white', cursor: 'pointer', fontSize: '0.85rem', padding: '0.4rem 0.9rem', borderRadius: '20px' }}>
           ← Retour
         </button>
       </header>
 
-      <main style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <main className="edg-wide" style={{ maxWidth: '700px', margin: '0 auto', padding: '2rem 1rem' }}>
         {loading && <p style={{ color: COLORS.textLight }}>Chargement...</p>}
 
         {!loading && (
-          <>
+          <div className="edg-jours">
             <SectionJour
               titre="🐴 Les cours d'aujourd'hui"
               dateAffichee={aujourdhui.dateAffichee}
@@ -186,7 +186,7 @@ export default function Demain({ onBack }) {
               cours={demain.cours}
               messageVide="Aucun cours prévu demain."
             />
-          </>
+          </div>
         )}
       </main>
     </div>
