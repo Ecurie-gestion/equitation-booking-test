@@ -1,0 +1,114 @@
+/*
+  Mise en page "grand écran" du site des familles.
+
+  Tout est dans UN SEUL bloc @media (min-width: 1025px) : en dessous de cette
+  largeur (téléphones et tablettes), aucune règle de ce fichier ne s'applique,
+  l'affichage reste donc strictement celui d'avant.
+
+  Les composants gardent leurs styles actuels ; on ne fait que les surcharger
+  ici (d'où les !important, car les styles d'origine sont écrits en ligne).
+*/
+
+/* Élément présent dans la page mais visible uniquement sur grand écran */
+.edg-cal-label {
+  display: none;
+}
+
+@media (min-width: 1025px) {
+  /* Plus de colonne étroite entourée de bords : la page prend tout l'écran
+     (l'en-tête, la bannière et le pied de page vont jusqu'aux bords). */
+  #root {
+    width: 100%;
+    max-width: none;
+    border-inline: none;
+  }
+
+  /* L'en-tête s'aligne sur la largeur du contenu */
+  .edg-header {
+    padding-left: max(2rem, calc((100% - 1100px) / 2)) !important;
+    padding-right: max(2rem, calc((100% - 1100px) / 2)) !important;
+  }
+
+  /* Pages "larges" : accueil, aujourd'hui & demain */
+  .edg-wide {
+    max-width: 1100px !important;
+    padding: 2.5rem 2rem !important;
+  }
+
+  /* Pages de saisie : un peu plus larges, mais pas étirées */
+  .edg-mid {
+    max-width: 880px !important;
+    padding: 2.5rem 2rem !important;
+  }
+
+  /* Formulaires d'inscription : centrés, largeur confortable */
+  .edg-form {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Listes de créneaux / stages : deux colonnes */
+  .edg-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch;
+  }
+
+  /* Aujourd'hui & demain : côte à côte */
+  .edg-jours {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem;
+    align-items: start;
+  }
+
+  .edg-footer-in {
+    max-width: 1100px !important;
+  }
+
+  /* Calendrier : cases plus grandes, avec le nom des cours écrit dedans */
+  .edg-cal-cell {
+    min-height: 104px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Cases vides avant le 1er du mois : invisibles */
+  .edg-cal-empty {
+    visibility: hidden;
+  }
+
+  .edg-cal-day {
+    font-size: 0.95rem !important;
+    align-self: flex-start;
+    padding: 0.35rem 0.5rem 0.25rem !important;
+  }
+
+  .edg-cal-bar {
+    height: auto !important;
+    min-height: 17px;
+    padding: 1px 6px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    border-radius: 4px !important;
+  }
+
+  .edg-cal-label {
+    display: block;
+    width: 100%;
+    font-size: 0.7rem;
+    line-height: 1.35;
+    text-align: left;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Couleurs claires : texte foncé pour rester lisible */
+  .edg-cal-bar[data-type='cours'] .edg-cal-label,
+  .edg-cal-bar[data-type='concours'] .edg-cal-label,
+  .edg-cal-bar[data-type='libre'] .edg-cal-label {
+    color: #1a2744;
+  }
+}
