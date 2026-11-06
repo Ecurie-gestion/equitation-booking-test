@@ -100,9 +100,8 @@
     line-height: 1.35;
     text-align: left;
     color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   /* Couleurs claires : texte foncé pour rester lisible */
@@ -111,4 +110,26 @@
   .edg-cal-bar[data-type='libre'] .edg-cal-label {
     color: #1a2744;
   }
+}
+
+/*
+  Très grands écrans, ou navigateur dézoomé (Ctrl + molette) : la page est
+  agrandie proportionnellement pour que textes, boutons et calendrier restent
+  à une taille confortable, au lieu de rester minuscules au milieu d'un grand
+  vide. Sous 1700 px de large, rien ne change.
+*/
+@media (min-width: 1700px) {
+  #root { zoom: 1.2; min-height: calc(100svh / 1.2); }
+}
+@media (min-width: 2100px) {
+  #root { zoom: 1.5; min-height: calc(100svh / 1.5); }
+}
+@media (min-width: 2500px) {
+  #root { zoom: 1.8; min-height: calc(100svh / 1.8); }
+}
+@media (min-width: 2900px) {
+  #root { zoom: 2.1; min-height: calc(100svh / 2.1); }
+}
+@media (min-width: 3300px) {
+  #root { zoom: 2.4; min-height: calc(100svh / 2.4); }
 }
