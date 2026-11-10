@@ -64,6 +64,40 @@ export default function MyBookings({ onBack }) {
   const [loadingHisto, setLoadingHisto] = useState(false)
   const [errorHisto, setErrorHisto] = useState(null)
 
+  // Cheval et épreuves de concours : nécessite aussi l'email ou le
+  // téléphone enregistré. La vérification est faite par la base de
+  // données, qui ne renvoie que le programme de CE cavalier (jamais celui
+  // des autres) et seulement si le moniteur a publié le programme.
+  const [afficherConcours, setAfficherConcours] = useState(false)
+  const [contactConcours, setContactConcours] = useState('')
+  const [programme, setProgramme] = useState(null) // liste de concours, ou null si pas encore cherché
+  const [loadingConcours, setLoadingConcours] = useState(false)
+  const [errorConcours, setErrorConcours] = useState(null)
+
+  async function fetchProgrammeConcours() {
+    if (!prenom || !nom || !contactConcours) {
+      setErrorConcours("Veuillez renseigner le prénom, le nom (en haut de la page), et l'email ou le téléphone utilisé lors de l'inscription.")
+      return
+    }
+    setLoadingConcours(true)
+    setErrorConcours(null)
+    setProgramme(null)
+    const { data, error } = await supabase.rpc('mon_programme_concours', {
+      p_prenom: prenom.trim(),
+      p_nom: nom.trim(),
+      p_contact: contactConcours.trim()
+    })
+    if (error) {
+      setErrorConcours("Le service n'est pas disponible pour le moment. Réessayez plus tard ou contactez l'écurie.")
+    } else if (!data || data.ok !== true) {
+      // Message volontairement générique (comme pour l'historique).
+      setErrorConcours("Informations non reconnues. Vérifiez le prénom, le nom, et l'email ou le téléphone utilisé lors de l'inscription. Pour toute question, contactez l'écurie.")
+    } else {
+      setProgramme(data.concours || [])
+    }
+    setLoadingConcours(false)
+  }
+
   async function trouverCavalier() {
     const prenomN = normalizeName(prenom)
     const nomN = normalizeName(nom)
@@ -462,6 +496,61 @@ export default function MyBookings({ onBack }) {
               </button>
             </div>
             {errorHisto && <p style={{ color: 'red', marginTop: '0.8rem', fontSize: '0.9rem' }}>{errorHisto}</p>}
+          </div>
+        )}
+
+        {/* Cheval et épreuves de concours (vérification par email / téléphone) */}
+        {!afficherConcours ? (
+          <div style={{ marginTop: '0.8rem', marginBottom: '1.5rem' }}>
+            <button onClick={() => setAfficherConcours(true)}
+              style={{ background: 'none', border: 'none', color: COLORS.sky, cursor: 'pointer', fontSize: '0.95rem', textDecoration: 'underline', padding: 0 }}>
+              🏆 Voir mon cheval et mes épreuves de concours
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 20px rgba(26,39,68,0.06)', marginTop: '0.8rem', marginBottom: '2rem' }}>
+            <p style={{ color: COLORS.navy, fontWeight: 'bold', marginTop: 0, marginBottom: '0.5rem' }}>🏆 Mon cheval et mes épreuves de concours</p>
+            <p style={{ color: COLORS.textLight, fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Pour protéger la confidentialité, merci de confirmer l'email ou le téléphone utilisé lors de l'inscription (avec le prénom et le nom saisis en haut de la page). Vous ne verrez que les informations de ce cavalier.
+            </p>
+            <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+              <input
+                placeholder="Email ou téléphone enregistré"
+                value={contactConcours}
+                onChange={e => setContactConcours(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && fetchProgrammeConcours()}
+                style={{ flex: 1, minWidth: '220px', padding: '0.7rem 1rem', borderRadius: '8px', border: `2px solid #ddd`, fontSize: '1rem', outline: 'none' }}
+              />
+              <button onClick={fetchProgrammeConcours} disabled={loadingConcours}
+                style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '0.7rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                {loadingConcours ? '⏳...' : 'Voir mon programme'}
+              </button>
+            </div>
+            {errorConcours && <p style={{ color: 'red', marginTop: '0.8rem', fontSize: '0.9rem' }}>{errorConcours}</p>}
+
+            {programme !== null && programme.length === 0 && (
+              <p style={{ color: COLORS.textLight, marginTop: '1rem', marginBottom: 0, fontSize: '0.92rem' }}>
+                Aucun programme de concours publié pour ce cavalier pour le moment.
+              </p>
+            )}
+
+            {programme !== null && programme.map(c => (
+              <div key={c.event_id} style={{ marginTop: '1rem', background: COLORS.beigeLight, borderRadius: '12px', padding: '1rem 1.2rem', borderLeft: '5px solid #2ecc71' }}>
+                <h3 style={{ color: COLORS.navy, margin: '0 0 0.3rem 0', fontSize: '1rem' }}>🏆 {c.titre}</h3>
+                <p style={{ margin: '0 0 0.6rem 0', color: COLORS.textLight, fontSize: '0.88rem' }}>
+                  📅 {new Date(c.date_start + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {c.date_end && c.date_end !== c.date_start ? ` au ${new Date(c.date_end + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}` : ''}
+                </p>
+                {(c.epreuves || []).map((e, i) => (
+                  <div key={i} style={{ padding: '0.45rem 0', borderTop: i === 0 ? 'none' : '1px solid #ece6da', fontSize: '0.95rem', color: COLORS.navy }}>
+                    <strong>{e.heure ? `${e.heure} — ` : ''}{e.epreuve}</strong>
+                    <div style={{ color: COLORS.textLight, fontSize: '0.9rem' }}>
+                      {e.cheval ? `🐴 ${e.cheval}` : '🐴 Cheval pas encore communiqué'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         )}
 
