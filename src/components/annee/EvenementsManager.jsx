@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { COLORS, EVENT_TYPES } from '../../lib/theme'
 import { upsertCavalierDepuisReservation } from '../../lib/cavaliers'
 import EleveSelector from '../admin/EleveSelector'
+import ProgrammeConcours from './ProgrammeConcours'
 
 const EMPTY_EVENT = { title: '', type: 'stage', date_start: '', date_end: '', description: '', capacite_max: '', inscriptible: false, date_limite_inscription: '' }
 const EMPTY_INSCRIT = { parent_name: '', child_name: '', child_nom: '', email: '', phone: '' }
@@ -22,6 +23,7 @@ export default function EvenementsManager() {
   const [newEvent, setNewEvent] = useState(EMPTY_EVENT)
   const [message, setMessage] = useState(null)
   const [cavaliers, setCavaliers] = useState([])
+  const [chevaux, setChevaux] = useState([])
 
   // Inscriptions aux stages
   const [ouvertInscriptions, setOuvertInscriptions] = useState(null)
@@ -30,7 +32,7 @@ export default function EvenementsManager() {
   const [nouvelInscrit, setNouvelInscrit] = useState(EMPTY_INSCRIT)
   const [droitImageAjout, setDroitImageAjout] = useState(null)
 
-  useEffect(() => { fetchEvents(); fetchCavaliers() }, [])
+  useEffect(() => { fetchEvents(); fetchCavaliers(); fetchChevaux() }, [])
 
   // Même principe que pour les créneaux : envoie une demande de
   // synchronisation à la fonction technique, sans jamais bloquer l'action
@@ -60,6 +62,11 @@ export default function EvenementsManager() {
   async function fetchCavaliers() {
     const { data } = await supabase.from('cavaliers').select('*').eq('actif', true).order('nom')
     setCavaliers(data || [])
+  }
+
+  async function fetchChevaux() {
+    const { data } = await supabase.from('chevaux').select('id, nom, actif').order('nom')
+    setChevaux(data || [])
   }
 
   async function fetchInscriptions(eventId) {
@@ -310,6 +317,15 @@ export default function EvenementsManager() {
                   </div>
                 ) : (
                   <button onClick={() => setAjoutOuvert(true)} style={{ background: COLORS.sky, color: 'white', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' }}>➕ Ajouter un élève</button>
+                )}
+
+                {event.type === 'concours' && (
+                  <ProgrammeConcours
+                    event={event}
+                    inscrits={inscrits}
+                    chevaux={chevaux}
+                    onPublicationChange={fetchEvents}
+                  />
                 )}
               </div>
             )}
